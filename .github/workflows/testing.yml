@@ -1,0 +1,57 @@
+name: testing
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build server
+        run: make build
+
+  linter:
+    runs-on: ubuntu-latest
+    name: Run linter
+    needs:
+      - build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run linter
+        run: make lint
+
+  test:
+    runs-on: ubuntu-latest
+    name: Run tests
+    needs:
+      - linter
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run test
+        run: |
+          export PORT=5000
+          export APP_ENV=development
+          export MONGO_DB_PORT=27017
+          export MONGO_DB_NAME=Example
+          export MONGO_DB_URL=http://127.0.0.1
+          export FIREBASE_CRED_PATH=./example.json
+          export ANDROID_CHANNEL_NAME=example
+          make test
