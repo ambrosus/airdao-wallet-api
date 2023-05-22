@@ -109,7 +109,7 @@ func (s *service) PriceWatch(ctx context.Context, w *Watcher) {
 				// fmt.Printf("Price increased on %v percent\n", increasePercentage)
 				_, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", increasePercentage), string(decodedPushToken))
 				if err != nil {
-					s.logger.Error(err)
+					s.logger.Errorln(err)
 				}
 			}
 
@@ -117,7 +117,7 @@ func (s *service) PriceWatch(ctx context.Context, w *Watcher) {
 				// fmt.Printf("Price decrease on %v percent tx\n", increasePercentage)
 				_, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price decrease on %v percent tx\n", increasePercentage), string(decodedPushToken))
 				if err != nil {
-					s.logger.Error(err)
+					s.logger.Errorln(err)
 				}
 			}
 
@@ -147,7 +147,9 @@ func (s *service) TransactionWatch(ctx context.Context, w *Watcher) {
 
 					w.SetLastTx(missedTx[0].Hash)
 
-					s.repository.UpdateWatcher(ctx, w)
+					if err := s.repository.UpdateWatcher(ctx, w); err != nil {
+						s.logger.Errorln(err)
+					}
 
 					// fmt.Printf("Your watched address %s have missed %v tx\n", w.Address, len(missedTx))
 
@@ -158,7 +160,7 @@ func (s *service) TransactionWatch(ctx context.Context, w *Watcher) {
 
 					_, err = s.cloudMessagingSvc.SendMessage(ctx, "Transaction Alert", fmt.Sprintf("You have new tx: %s", missedTx[0].Hash), string(decodedPushToken))
 					if err != nil {
-						s.logger.Error(err)
+						s.logger.Errorln(err)
 					}
 					break
 				}

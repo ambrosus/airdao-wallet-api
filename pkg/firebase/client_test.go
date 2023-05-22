@@ -3,6 +3,7 @@ package firebase_test
 import (
 	"airdao-mobile-api/pkg/firebase"
 	"encoding/json"
+	"log"
 
 	"os"
 	"path/filepath"
@@ -83,7 +84,10 @@ func TestCreateCloudMessagingClient(t *testing.T) {
 	d, _ := json.Marshal(testCred)
 
 	f, _ := os.Create("cred.json")
-	f.Write(d)
+	_, err := f.Write(d)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	path, _ := filepath.Abs("cred.json")
 
