@@ -13,7 +13,7 @@ deps:
 
 lint:
 	$(call pprint, Runnning linter...)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.2
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.51.2
 	./bin/golangci-lint --version
 	./bin/golangci-lint run ./...
 	$(call completed)
