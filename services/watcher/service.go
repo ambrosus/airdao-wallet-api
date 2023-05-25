@@ -106,21 +106,25 @@ func (s *service) PriceWatch(ctx context.Context, w *Watcher) {
 			increasePercentage := (priceData.Data.PriceUSD - s.cachedPrice) / s.cachedPrice * 100
 
 			if increasePercentage >= 0.01 {
-				fmt.Printf("Price increased on %v percent\n", increasePercentage)
-				_, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", increasePercentage), string(decodedPushToken))
+				response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", increasePercentage), string(decodedPushToken))
 				if err != nil {
 					s.logger.Errorln(err)
+				}
+
+				if response != nil {
+					s.logger.Infof("Price notification successfully sent")
 				}
 			}
 
 			if increasePercentage <= -0.01 {
-				fmt.Printf("Price decrease on %v percent tx\n", increasePercentage)
 				response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price decrease on %v percent tx\n", increasePercentage), string(decodedPushToken))
 				if err != nil {
 					s.logger.Errorln(err)
 				}
 
-				s.logger.Infof("Success sent: %s\n", *response)
+				if response != nil {
+					s.logger.Infof("Price notification successfully sent")
+				}
 			}
 
 			s.cachedPrice = priceData.Data.PriceUSD
@@ -153,8 +157,6 @@ func (s *service) TransactionWatch(ctx context.Context, w *Watcher) {
 						s.logger.Errorln(err)
 					}
 
-					fmt.Printf("Your watched address %s have missed %v tx\n", w.Address, len(missedTx))
-
 					decodedPushToken, err := base64.StdEncoding.DecodeString(w.PushToken)
 					if err != nil {
 						s.logger.Errorln(err)
@@ -165,7 +167,10 @@ func (s *service) TransactionWatch(ctx context.Context, w *Watcher) {
 						s.logger.Errorln(err)
 					}
 
-					s.logger.Infof("Success sent: %s\n", *response)
+					if response != nil {
+						s.logger.Infof("Transaction notification successfully sent")
+					}
+
 					break
 				}
 

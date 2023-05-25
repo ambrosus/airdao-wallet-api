@@ -131,7 +131,7 @@ func main() {
 		}
 	}()
 
-	zapLogger.Infof("Server started on port %v\n", cfg.Port)
+	zapLogger.Infoln("Server started on port %v", cfg.Port)
 
 	// Create a context that will be used to gracefully shut down the server
 	ctx, cancel = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
