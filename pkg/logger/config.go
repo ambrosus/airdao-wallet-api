@@ -66,7 +66,8 @@ func (c *config) GetProductionConfig() LogConfig {
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 			EncodeCaller:   zapcore.ShortCallerEncoder,
 		},
-		OutputPaths:      []string{"logs.log", "stdout"},
+		// OutputPaths:      []string{"logs.log", "stdout"},
+		OutputPaths:      []string{"stderr"},
 		ErrorOutputPaths: []string{"stderr"},
 	}}
 }
