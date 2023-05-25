@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -38,8 +40,8 @@ func (c *config) GetDevelopmentConfig() LogConfig {
 			EncodeCaller:   zapcore.ShortCallerEncoder,
 			EncodeName:     zapcore.FullNameEncoder,
 		},
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
+		OutputPaths:      []string{os.Stdout.Name()},
+		ErrorOutputPaths: []string{os.Stderr.Name()},
 	}}
 }
 
@@ -67,7 +69,7 @@ func (c *config) GetProductionConfig() LogConfig {
 			EncodeCaller:   zapcore.ShortCallerEncoder,
 		},
 		// OutputPaths:      []string{"logs.log", "stdout"},
-		OutputPaths:      []string{"stderr"},
-		ErrorOutputPaths: []string{"stderr"},
+		OutputPaths:      []string{os.Stdout.Name()},
+		ErrorOutputPaths: []string{os.Stderr.Name()},
 	}}
 }
