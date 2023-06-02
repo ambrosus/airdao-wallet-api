@@ -23,10 +23,11 @@ const (
 type Service interface {
 	Init(ctx context.Context) error
 
-	TransactionWatch(ctx context.Context, w *Watcher)
-	PriceWatch(ctx context.Context, w *Watcher)
+	TransactionWatch(ctx context.Context, w *Watcher, stopChan chan struct{})
+	PriceWatch(ctx context.Context, w *Watcher, stopChan chan struct{})
 
-	AddAddressWatcher(ctx context.Context, address, pushToken string) error
+	CreateWatcher(ctx context.Context, address, pushToken string, threshold int) error
+	DeleteWatcher(ctx context.Context, address, pushToken string) error
 }
 
 type service struct {
@@ -34,6 +35,7 @@ type service struct {
 	cloudMessagingSvc cloudmessaging.Service
 	logger            *zap.SugaredLogger
 
+	cachedChan  map[string]chan struct{}
 	cachedPrice float64
 }
 
@@ -53,6 +55,7 @@ func NewService(repository Repository, cloudMessagingSvc cloudmessaging.Service,
 		cloudMessagingSvc: cloudMessagingSvc,
 		logger:            logger,
 
+		cachedChan:  make(map[string]chan struct{}),
 		cachedPrice: 0,
 	}, nil
 }
@@ -79,8 +82,11 @@ func (s *service) Init(ctx context.Context) error {
 		}
 
 		for _, w := range watchers {
-			go s.TransactionWatch(ctx, w)
-			go s.PriceWatch(ctx, w)
+			stopChan := make(chan struct{})
+			s.cachedChan[w.ID.Hex()] = stopChan
+
+			go s.TransactionWatch(ctx, w, stopChan)
+			go s.PriceWatch(ctx, w, stopChan)
 		}
 
 		page++
@@ -89,100 +95,118 @@ func (s *service) Init(ctx context.Context) error {
 	return nil
 }
 
-func (s *service) PriceWatch(ctx context.Context, w *Watcher) {
+func (s *service) PriceWatch(ctx context.Context, w *Watcher, stopChan chan struct{}) {
 	for {
-		// watch price
-		var priceData *PriceData
-		if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
-			s.logger.Errorln(err)
-		}
-
-		decodedPushToken, err := base64.StdEncoding.DecodeString(w.PushToken)
-		if err != nil {
-			s.logger.Errorln(err)
-		}
-
-		if priceData != nil {
-			increasePercentage := (priceData.Data.PriceUSD - s.cachedPrice) / s.cachedPrice * 100
-
-			if increasePercentage >= 0.01 {
-				response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", increasePercentage), string(decodedPushToken))
-				if err != nil {
-					s.logger.Errorln(err)
-				}
-
-				if response != nil {
-					s.logger.Infof("Price notification successfully sent")
-				}
+		select {
+		case <-stopChan:
+			fmt.Println("Stopping price goroutine...")
+			return
+		default:
+			// watch price
+			var priceData *PriceData
+			if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
+				s.logger.Errorln(err)
 			}
 
-			if increasePercentage <= -0.01 {
-				response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price decrease on %v percent tx\n", increasePercentage), string(decodedPushToken))
-				if err != nil {
-					s.logger.Errorln(err)
-				}
-
-				if response != nil {
-					s.logger.Infof("Price notification successfully sent")
-				}
+			decodedPushToken, err := base64.StdEncoding.DecodeString(w.PushToken)
+			if err != nil {
+				s.logger.Errorln(err)
 			}
 
-			s.cachedPrice = priceData.Data.PriceUSD
+			if priceData != nil {
+				increasePercentage := (priceData.Data.PriceUSD - s.cachedPrice) / s.cachedPrice * 100
 
-		}
+				if increasePercentage >= float64(*w.Threshold) {
+					data := map[string]interface{}{"type": "price-alert", "percentage": increasePercentage}
 
-		time.Sleep(5 * time.Minute)
-	}
-}
-
-func (s *service) TransactionWatch(ctx context.Context, w *Watcher) {
-	for {
-		// watch tx
-		var addressData *AddressData
-		if err := s.doRequest(fmt.Sprintf("https://explorer-v2-api.ambrosus-test.io/v2/addresses/%s/all", w.Address), &addressData); err != nil {
-			s.logger.Errorln(err)
-		}
-
-		if addressData != nil && len(addressData.Data) > 0 {
-
-			missedTx := []Tx{}
-
-			for i := range addressData.Data {
-				if w.LastTx == nil || (*w.LastTx != addressData.Data[i].Hash && (i+1) < len(addressData.Data) && *w.LastTx == addressData.Data[i+1].Hash) {
-					missedTx = append(missedTx, addressData.Data[i])
-
-					w.SetLastTx(missedTx[0].Hash)
-
-					if err := s.repository.UpdateWatcher(ctx, w); err != nil {
-						s.logger.Errorln(err)
-					}
-
-					decodedPushToken, err := base64.StdEncoding.DecodeString(w.PushToken)
-					if err != nil {
-						s.logger.Errorln(err)
-					}
-
-					response, err := s.cloudMessagingSvc.SendMessage(ctx, "Transaction Alert", fmt.Sprintf("You have new tx: %s", missedTx[0].Hash), string(decodedPushToken))
+					response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", increasePercentage), string(decodedPushToken), data)
 					if err != nil {
 						s.logger.Errorln(err)
 					}
 
 					if response != nil {
-						s.logger.Infof("Transaction notification successfully sent")
+						s.logger.Infof("Price notification successfully sent")
 					}
-
-					break
 				}
 
-				missedTx = append(missedTx, addressData.Data[i])
+				if increasePercentage <= -float64(*w.Threshold) {
+					data := map[string]interface{}{"type": "price-alert", "percentage": increasePercentage}
 
+					response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price decrease on %v percent tx\n", increasePercentage), string(decodedPushToken), data)
+					if err != nil {
+						s.logger.Errorln(err)
+					}
+
+					if response != nil {
+						s.logger.Infof("Price notification successfully sent")
+					}
+				}
+
+				s.cachedPrice = priceData.Data.PriceUSD
 			}
-		}
 
+			time.Sleep(5 * time.Minute)
+		}
 	}
 }
 
-func (s *service) AddAddressWatcher(ctx context.Context, address, pushToken string) error {
+func (s *service) TransactionWatch(ctx context.Context, w *Watcher, stopChan chan struct{}) {
+	for {
+		select {
+		case <-stopChan:
+			fmt.Println("Stopping transaction goroutine...")
+			return
+		default:
+			// watch tx
+			var addressData *AddressData
+			if err := s.doRequest(fmt.Sprintf("https://explorer-v2-api.ambrosus-test.io/v2/addresses/%s/all", w.Address), &addressData); err != nil {
+				s.logger.Errorln(err)
+			}
+
+			if addressData != nil && len(addressData.Data) > 0 {
+
+				missedTx := []Tx{}
+
+				for i := range addressData.Data {
+					if w.LastTx == nil || (*w.LastTx != addressData.Data[i].Hash && (i+1) < len(addressData.Data) && *w.LastTx == addressData.Data[i+1].Hash) {
+						missedTx = append(missedTx, addressData.Data[i])
+
+						w.SetLastTx(missedTx[0].Hash)
+
+						if err := s.repository.UpdateWatcher(ctx, w); err != nil {
+							s.logger.Errorln(err)
+						}
+
+						data := map[string]interface{}{"type": "transaction-alert"}
+
+						decodedPushToken, err := base64.StdEncoding.DecodeString(w.PushToken)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Transaction Alert", fmt.Sprintf("You have new tx: %s", missedTx[0].Hash), string(decodedPushToken), data)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						if response != nil {
+							s.logger.Infof("Transaction notification successfully sent")
+						}
+
+						break
+					}
+
+					missedTx = append(missedTx, addressData.Data[i])
+
+				}
+			}
+
+			time.Sleep(10 * time.Second)
+		}
+	}
+}
+
+func (s *service) CreateWatcher(ctx context.Context, address, pushToken string, threshold int) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
 
 	dbWatcher, err := s.repository.GetWatcher(ctx, bson.M{"address": address, "push_token": encodePushToken})
@@ -194,7 +218,7 @@ func (s *service) AddAddressWatcher(ctx context.Context, address, pushToken stri
 		return errors.New("watcher for this address and token already exist")
 	}
 
-	watcher, err := NewWatcher(address, encodePushToken)
+	watcher, err := NewWatcher(address, encodePushToken, &threshold)
 	if err != nil {
 		return err
 	}
@@ -221,8 +245,36 @@ func (s *service) AddAddressWatcher(ctx context.Context, address, pushToken stri
 		return err
 	}
 
-	go s.TransactionWatch(ctx, watcher)
-	go s.PriceWatch(ctx, watcher)
+	stopChan := make(chan struct{})
+	s.cachedChan[watcher.ID.Hex()] = stopChan
+
+	go s.TransactionWatch(ctx, watcher, stopChan)
+	go s.PriceWatch(ctx, watcher, stopChan)
+
+	return nil
+}
+
+func (s *service) DeleteWatcher(ctx context.Context, address, pushToken string) error {
+	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
+
+	filters := bson.M{"address": address, "push_token": encodePushToken}
+
+	dbWatcher, err := s.repository.GetWatcher(ctx, filters)
+	if err != nil {
+		return err
+	}
+
+	if dbWatcher == nil {
+		return errors.New("watcher not found")
+	}
+
+	if err := s.repository.DeleteWatcher(ctx, filters); err != nil {
+		return err
+	}
+
+	watcherStopChan := s.cachedChan[dbWatcher.ID.Hex()]
+	close(watcherStopChan)
+	delete(s.cachedChan, dbWatcher.ID.Hex())
 
 	return nil
 }

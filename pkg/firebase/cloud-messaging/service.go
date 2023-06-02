@@ -3,12 +3,13 @@ package cloudmessaging
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"firebase.google.com/go/messaging"
 )
 
 type Service interface {
-	SendMessage(ctx context.Context, title, body, pushToken string) (*string, error)
+	SendMessage(ctx context.Context, title, body, pushToken string, data map[string]interface{}) (*string, error)
 }
 
 type service struct {
@@ -27,7 +28,20 @@ func NewCloudMessagingService(fcmClient *messaging.Client, androidChannel string
 	return &service{fcmClient: fcmClient, androidChannel: androidChannel}, nil
 }
 
-func (s *service) SendMessage(ctx context.Context, title, body, pushToken string) (*string, error) {
+func (s *service) SendMessage(ctx context.Context, title, body, pushToken string, data map[string]interface{}) (*string, error) {
+
+	androidData := make(map[string]string)
+	for key, value := range data {
+		switch v := value.(type) {
+		case string:
+			androidData[key] = v
+		case int:
+			androidData[key] = strconv.Itoa(v)
+		case bool:
+			androidData[key] = strconv.FormatBool(v)
+		}
+	}
+
 	response, err := s.fcmClient.Send(ctx, &messaging.Message{
 
 		// iOS
@@ -38,7 +52,8 @@ func (s *service) SendMessage(ctx context.Context, title, body, pushToken string
 						Title: title,
 						Body:  body,
 					},
-					Sound: "default",
+					Sound:      "default",
+					CustomData: data,
 				},
 			},
 		},
@@ -51,6 +66,7 @@ func (s *service) SendMessage(ctx context.Context, title, body, pushToken string
 				ChannelID: s.androidChannel,
 				Sound:     "default",
 			},
+			Data: androidData,
 		},
 		Token: pushToken,
 	})

@@ -16,8 +16,8 @@ type Repository interface {
 	GetWatcherList(ctx context.Context, filters bson.M, page int) ([]*Watcher, error)
 
 	CreateWatcher(ctx context.Context, watcher *Watcher) error
-
 	UpdateWatcher(ctx context.Context, watcher *Watcher) error
+	DeleteWatcher(ctx context.Context, filters bson.M) error
 }
 
 type repository struct {
@@ -119,6 +119,16 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 
 		r.logger.Errorf("failed to update watcher: %s", err)
 		return errors.New("failed to update watcher")
+	}
+
+	return nil
+}
+
+func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
+	_, err := r.db.Database(r.dbName).Collection(r.dbCollectionName).DeleteOne(ctx, filters)
+	if err != nil {
+		r.logger.Errorf("failed to delete watcher: %s", err)
+		return errors.New("failed to delete watcher")
 	}
 
 	return nil

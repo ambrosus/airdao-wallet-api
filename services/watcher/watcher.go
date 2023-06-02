@@ -12,18 +12,22 @@ type Watcher struct {
 	Address   string             `bson:"address"`
 	PushToken string             `bson:"push_token"`
 
-	LastTx *string `bson:"last_tx"`
+	LastTx    *string `bson:"last_tx"`
+	Threshold *int    `bson:"threshold"`
 
 	CreatedAt time.Time `bson:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at"`
 }
 
-func NewWatcher(address, pushToken string) (*Watcher, error) {
+func NewWatcher(address, pushToken string, threshold *int) (*Watcher, error) {
 	if address == "" {
 		return nil, errors.New("invalid address")
 	}
 	if pushToken == "" {
 		return nil, errors.New("invalid push token")
+	}
+	if threshold == nil {
+		return nil, errors.New("invalid threshold")
 	}
 
 	return &Watcher{
@@ -31,7 +35,8 @@ func NewWatcher(address, pushToken string) (*Watcher, error) {
 		Address:   address,
 		PushToken: pushToken,
 
-		LastTx: nil,
+		LastTx:    nil,
+		Threshold: threshold,
 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
