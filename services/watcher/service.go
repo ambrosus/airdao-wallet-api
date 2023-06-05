@@ -24,6 +24,7 @@ type Service interface {
 	Init(ctx context.Context) error
 
 	TransactionWatch(ctx context.Context, w *Watcher, stopChan chan struct{})
+	ApiPriceWatch(ctx context.Context)
 	PriceWatch(ctx context.Context, w *Watcher, stopChan chan struct{})
 
 	CreateWatcher(ctx context.Context, address, pushToken string, threshold int) error
@@ -35,8 +36,9 @@ type service struct {
 	cloudMessagingSvc cloudmessaging.Service
 	logger            *zap.SugaredLogger
 
-	cachedChan  map[string]chan struct{}
-	cachedPrice float64
+	cachedChan       map[string]chan struct{}
+	cachedPrice      float64
+	cachedPercentage float64
 }
 
 func NewService(repository Repository, cloudMessagingSvc cloudmessaging.Service, logger *zap.SugaredLogger) (Service, error) {
@@ -55,17 +57,19 @@ func NewService(repository Repository, cloudMessagingSvc cloudmessaging.Service,
 		cloudMessagingSvc: cloudMessagingSvc,
 		logger:            logger,
 
-		cachedChan:  make(map[string]chan struct{}),
-		cachedPrice: 0,
+		cachedChan:       make(map[string]chan struct{}),
+		cachedPrice:      0,
+		cachedPercentage: 0,
 	}, nil
 }
 
 func (s *service) Init(ctx context.Context) error {
+	go s.ApiPriceWatch(ctx)
+
 	var priceData *PriceData
 	if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
 		return err
 	}
-
 	if priceData != nil {
 		s.cachedPrice = priceData.Data.PriceUSD
 	}
@@ -95,6 +99,25 @@ func (s *service) Init(ctx context.Context) error {
 	return nil
 }
 
+func (s *service) ApiPriceWatch(ctx context.Context) {
+	for {
+		var priceData *PriceData
+		if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
+			s.logger.Errorln(err)
+		}
+
+		if priceData != nil {
+			percentage := (priceData.Data.PriceUSD - s.cachedPrice) / s.cachedPrice * 100
+
+			s.cachedPrice = priceData.Data.PriceUSD
+
+			s.cachedPercentage = percentage
+		}
+
+		time.Sleep(5 * time.Minute)
+	}
+}
+
 func (s *service) PriceWatch(ctx context.Context, w *Watcher, stopChan chan struct{}) {
 	for {
 		select {
@@ -102,50 +125,38 @@ func (s *service) PriceWatch(ctx context.Context, w *Watcher, stopChan chan stru
 			fmt.Println("Stopping price goroutine...")
 			return
 		default:
-			// watch price
-			var priceData *PriceData
-			if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
-				s.logger.Errorln(err)
-			}
-
 			decodedPushToken, err := base64.StdEncoding.DecodeString(w.PushToken)
 			if err != nil {
 				s.logger.Errorln(err)
 			}
 
-			if priceData != nil {
-				increasePercentage := (priceData.Data.PriceUSD - s.cachedPrice) / s.cachedPrice * 100
+			if s.cachedPercentage >= float64(*w.Threshold) {
+				data := map[string]interface{}{"type": "price-alert", "percentage": s.cachedPercentage}
 
-				if increasePercentage >= float64(*w.Threshold) {
-					data := map[string]interface{}{"type": "price-alert", "percentage": increasePercentage}
-
-					response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", increasePercentage), string(decodedPushToken), data)
-					if err != nil {
-						s.logger.Errorln(err)
-					}
-
-					if response != nil {
-						s.logger.Infof("Price notification successfully sent")
-					}
+				response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", s.cachedPercentage), string(decodedPushToken), data)
+				if err != nil {
+					s.logger.Errorln(err)
 				}
 
-				if increasePercentage <= -float64(*w.Threshold) {
-					data := map[string]interface{}{"type": "price-alert", "percentage": increasePercentage}
-
-					response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price decrease on %v percent tx\n", increasePercentage), string(decodedPushToken), data)
-					if err != nil {
-						s.logger.Errorln(err)
-					}
-
-					if response != nil {
-						s.logger.Infof("Price notification successfully sent")
-					}
+				if response != nil {
+					s.logger.Infof("Price notification successfully sent")
 				}
-
-				s.cachedPrice = priceData.Data.PriceUSD
 			}
 
-			time.Sleep(5 * time.Minute)
+			if s.cachedPercentage <= -float64(*w.Threshold) {
+				data := map[string]interface{}{"type": "price-alert", "percentage": s.cachedPercentage}
+
+				response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price decrease on %v percent tx\n", s.cachedPercentage), string(decodedPushToken), data)
+				if err != nil {
+					s.logger.Errorln(err)
+				}
+
+				if response != nil {
+					s.logger.Infof("Price notification successfully sent")
+				}
+			}
+
+			time.Sleep(7 * time.Minute)
 		}
 	}
 }
