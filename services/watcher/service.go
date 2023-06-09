@@ -1,7 +1,6 @@
 package watcher
 
 import (
-	cloudmessaging "airdao-mobile-api/pkg/firebase/cloud-messaging"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -9,7 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
+
+	cloudmessaging "airdao-mobile-api/pkg/firebase/cloud-messaging"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
@@ -28,6 +30,7 @@ type Service interface {
 	PriceWatch(ctx context.Context, w *Watcher, stopChan chan struct{})
 
 	CreateWatcher(ctx context.Context, address, pushToken string, threshold int) error
+	UpdateWatcher(ctx context.Context, address, pushToken string, threshold int) error
 	DeleteWatcher(ctx context.Context, address, pushToken string) error
 }
 
@@ -36,6 +39,7 @@ type service struct {
 	cloudMessagingSvc cloudmessaging.Service
 	logger            *zap.SugaredLogger
 
+	mx               sync.RWMutex
 	cachedChan       map[string]chan struct{}
 	cachedPrice      float64
 	cachedPercentage float64
@@ -64,12 +68,11 @@ func NewService(repository Repository, cloudMessagingSvc cloudmessaging.Service,
 }
 
 func (s *service) Init(ctx context.Context) error {
-	go s.ApiPriceWatch(ctx)
-
 	var priceData *PriceData
 	if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
 		return err
 	}
+
 	if priceData != nil {
 		s.cachedPrice = priceData.Data.PriceUSD
 	}
@@ -86,15 +89,13 @@ func (s *service) Init(ctx context.Context) error {
 		}
 
 		for _, w := range watchers {
-			stopChan := make(chan struct{})
-			s.cachedChan[w.ID.Hex()] = stopChan
-
-			go s.TransactionWatch(ctx, w, stopChan)
-			go s.PriceWatch(ctx, w, stopChan)
+			s.sentUpStopChanAndStartWatchers(ctx, w)
 		}
 
 		page++
 	}
+
+	go s.ApiPriceWatch(ctx)
 
 	return nil
 }
@@ -110,10 +111,10 @@ func (s *service) ApiPriceWatch(ctx context.Context) {
 			percentage := (priceData.Data.PriceUSD - s.cachedPrice) / s.cachedPrice * 100
 
 			s.cachedPrice = priceData.Data.PriceUSD
-
 			s.cachedPercentage = percentage
 		}
 
+		// time.Sleep(1 * time.Minute)
 		time.Sleep(5 * time.Minute)
 	}
 }
@@ -122,7 +123,7 @@ func (s *service) PriceWatch(ctx context.Context, w *Watcher, stopChan chan stru
 	for {
 		select {
 		case <-stopChan:
-			fmt.Println("Stopping price goroutine...")
+			// fmt.Println("Stopping price goroutine...")
 			return
 		default:
 			decodedPushToken, err := base64.StdEncoding.DecodeString(w.PushToken)
@@ -156,7 +157,8 @@ func (s *service) PriceWatch(ctx context.Context, w *Watcher, stopChan chan stru
 				}
 			}
 
-			time.Sleep(7 * time.Minute)
+			time.Sleep(330 * time.Second)
+			// time.Sleep(90 * time.Second)
 		}
 	}
 }
@@ -165,7 +167,7 @@ func (s *service) TransactionWatch(ctx context.Context, w *Watcher, stopChan cha
 	for {
 		select {
 		case <-stopChan:
-			fmt.Println("Stopping transaction goroutine...")
+			// fmt.Println("Stopping transaction goroutine...")
 			return
 		default:
 			// watch tx
@@ -256,11 +258,32 @@ func (s *service) CreateWatcher(ctx context.Context, address, pushToken string, 
 		return err
 	}
 
-	stopChan := make(chan struct{})
-	s.cachedChan[watcher.ID.Hex()] = stopChan
+	s.sentUpStopChanAndStartWatchers(ctx, watcher)
 
-	go s.TransactionWatch(ctx, watcher, stopChan)
-	go s.PriceWatch(ctx, watcher, stopChan)
+	return nil
+}
+
+func (s *service) UpdateWatcher(ctx context.Context, address, pushToken string, threshold int) error {
+	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
+
+	watcher, err := s.repository.GetWatcher(ctx, bson.M{"address": address, "push_token": encodePushToken})
+	if err != nil {
+		return err
+	}
+
+	if threshold != *watcher.Threshold {
+		watcherStopChan := s.cachedChan[watcher.ID.Hex()]
+		close(watcherStopChan)
+		delete(s.cachedChan, watcher.ID.Hex())
+
+		watcher.SetThreshold(threshold)
+
+		if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+			return err
+		}
+
+		s.sentUpStopChanAndStartWatchers(ctx, watcher)
+	}
 
 	return nil
 }
@@ -283,11 +306,25 @@ func (s *service) DeleteWatcher(ctx context.Context, address, pushToken string) 
 		return err
 	}
 
+	s.mx.RLock()
+	defer s.mx.RUnlock()
+
 	watcherStopChan := s.cachedChan[dbWatcher.ID.Hex()]
 	close(watcherStopChan)
 	delete(s.cachedChan, dbWatcher.ID.Hex())
 
 	return nil
+}
+
+func (s *service) sentUpStopChanAndStartWatchers(ctx context.Context, w *Watcher) {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+
+	stopChan := make(chan struct{})
+	s.cachedChan[w.ID.Hex()] = stopChan
+
+	go s.TransactionWatch(ctx, w, stopChan)
+	go s.PriceWatch(ctx, w, stopChan)
 }
 
 func (s *service) doRequest(url string, res interface{}) error {
