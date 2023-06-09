@@ -20,13 +20,14 @@ func NewHandler(service Service) (*Handler, error) {
 
 func (h *Handler) SetupRoutes(router fiber.Router) {
 	router.Post("/watcher", h.CreateWatcherHandler)
+	router.Put("/watcher", h.UpdateWatcherHandler)
 	router.Delete("/watcher", h.DeleteWatcherHandler)
 }
 
 type CreateWatcher struct {
 	Address   string `json:"address" validate:"required,address"`
 	PushToken string `json:"push_token" validate:"required"`
-	Threshold int    `json:"threshold" validate:"required"`
+	Threshold int    `json:"threshold" validate:"required,threshold"`
 }
 
 func (h *Handler) CreateWatcherHandler(c *fiber.Ctx) error {
@@ -43,6 +44,32 @@ func (h *Handler) CreateWatcherHandler(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.CreateWatcher(c.Context(), reqBody.Address, reqBody.PushToken, reqBody.Threshold); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"status": "OK"})
+}
+
+type UpdateWatcher struct {
+	Address   string `json:"address" validate:"required,address"`
+	PushToken string `json:"push_token" validate:"required"`
+	Threshold int    `json:"threshold" validate:"required,threshold"`
+}
+
+func (h *Handler) UpdateWatcherHandler(c *fiber.Ctx) error {
+	var reqBody UpdateWatcher
+
+	if err := c.BodyParser(&reqBody); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	if err := Validate(reqBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if err := h.service.UpdateWatcher(c.Context(), reqBody.Address, reqBody.PushToken, reqBody.Threshold); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 

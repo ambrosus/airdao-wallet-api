@@ -14,6 +14,8 @@ func msgForTag(tag string) string {
 		return "is required"
 	case "address":
 		return "incorrect address"
+	case "threshold":
+		return "incorrect threshold (can be 5, 8 or 10)"
 	}
 	return ""
 }
@@ -30,6 +32,16 @@ func Validate(data interface{}) error {
 		}
 
 		return true
+	})
+
+	_ = validate.RegisterValidation("threshold", func(fl validator.FieldLevel) bool {
+		threshold := fl.Field().Int()
+
+		if threshold == 5 || threshold == 8 || threshold == 10 {
+			return true
+		}
+
+		return false
 	})
 
 	if err := validate.Struct(data); err != nil {

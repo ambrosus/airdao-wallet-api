@@ -57,3 +57,8 @@ func (w *Watcher) SetLastTx(tx string) {
 	w.LastTx = &tx
 	w.UpdatedAt = time.Now()
 }
+
+func (w *Watcher) SetThreshold(threshold int) {
+	w.Threshold = &threshold
+	w.UpdatedAt = time.Now()
+}
