@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - dev
 
 env:
   REGISTRY: ghcr.io
@@ -35,6 +36,7 @@ jobs:
         id: meta
         with:
           images: ghcr.io/ambrosus/airdao-wallet-api
+          tags: type=ref,event=branch
 
       - name: Build and push
         uses: docker/build-push-action@v2
