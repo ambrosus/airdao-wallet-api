@@ -14,7 +14,7 @@ type Tx struct {
 	Hash      string `json:"hash"`
 }
 
-type AddressData struct {
+type ApiAddressData struct {
 	Data    []Tx    `json:"data"`
 	Account Account `json:"account"`
 }
