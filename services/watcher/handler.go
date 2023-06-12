@@ -25,9 +25,7 @@ func (h *Handler) SetupRoutes(router fiber.Router) {
 }
 
 type CreateWatcher struct {
-	Address   string `json:"address" validate:"required,address"`
 	PushToken string `json:"push_token" validate:"required"`
-	Threshold int    `json:"threshold" validate:"required,threshold"`
 }
 
 func (h *Handler) CreateWatcherHandler(c *fiber.Ctx) error {
@@ -43,7 +41,7 @@ func (h *Handler) CreateWatcherHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if err := h.service.CreateWatcher(c.Context(), reqBody.Address, reqBody.PushToken, reqBody.Threshold); err != nil {
+	if err := h.service.CreateWatcher(c.Context(), reqBody.PushToken); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -51,9 +49,9 @@ func (h *Handler) CreateWatcherHandler(c *fiber.Ctx) error {
 }
 
 type UpdateWatcher struct {
-	Address   string `json:"address" validate:"required,address"`
-	PushToken string `json:"push_token" validate:"required"`
-	Threshold int    `json:"threshold" validate:"required,threshold"`
+	PushToken string    `json:"push_token" validate:"required"`
+	Addresses *[]string `json:"addresses" validate:"omitempty,addresses"`
+	Threshold *int      `json:"threshold" validate:"omitempty,threshold"`
 }
 
 func (h *Handler) UpdateWatcherHandler(c *fiber.Ctx) error {
@@ -69,7 +67,7 @@ func (h *Handler) UpdateWatcherHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if err := h.service.UpdateWatcher(c.Context(), reqBody.Address, reqBody.PushToken, reqBody.Threshold); err != nil {
+	if err := h.service.UpdateWatcher(c.Context(), reqBody.PushToken, reqBody.Addresses, reqBody.Threshold); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -77,7 +75,6 @@ func (h *Handler) UpdateWatcherHandler(c *fiber.Ctx) error {
 }
 
 type DeleteWatcher struct {
-	Address   string `json:"address" validate:"required,address"`
 	PushToken string `json:"push_token" validate:"required"`
 }
 
@@ -94,7 +91,7 @@ func (h *Handler) DeleteWatcherHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if err := h.service.DeleteWatcher(c.Context(), reqBody.Address, reqBody.PushToken); err != nil {
+	if err := h.service.DeleteWatcher(c.Context(), reqBody.PushToken); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
