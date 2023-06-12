@@ -3,9 +3,8 @@ name: Create and publish image
 on:
   push:
     branches:
-      - '*'
-    tags:
-      - 'v*'
+      - master
+      - dev
 
 env:
   REGISTRY: ghcr.io
@@ -43,7 +42,7 @@ jobs:
         with:
           file: Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: type=ref,event=branch
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
