@@ -12,6 +12,9 @@ type Tx struct {
 	From      string `json:"from"`
 	To        string `json:"to"`
 	Hash      string `json:"hash"`
+	Value     struct {
+		Ether float64 `json:"ether"`
+	} `json:"value"`
 }
 
 type ApiAddressData struct {

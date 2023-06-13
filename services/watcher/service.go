@@ -144,7 +144,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 
-						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("AMB Price changed on +%v percent\n", roundedPercentage), string(decodedPushToken), data)
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("🚀 AMB Price changed on +%v percent\n", roundedPercentage), string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorln(err)
 						}
@@ -167,7 +167,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 
-						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("AMB Price changed on -%v percent tx\n", roundedPercentage), string(decodedPushToken), data)
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("🔻 AMB Price changed on -%v percent tx\n", roundedPercentage), string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorln(err)
 						}
@@ -231,7 +231,7 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 									s.logger.Errorln(err)
 								}
 
-								response, err := s.cloudMessagingSvc.SendMessage(ctx, "AMB-Net Tx Alert", fmt.Sprintf("You have new tx: %s", missedTx[0].Hash), string(decodedPushToken), data)
+								response, err := s.cloudMessagingSvc.SendMessage(ctx, "AMB-Net Tx Alert", fmt.Sprintf("From: %s\nTo: %s\nAmount: %v", missedTx[0].From, missedTx[0].To, missedTx[0].Value.Ether), string(decodedPushToken), data)
 								if err != nil {
 									s.logger.Errorln(err)
 								}
