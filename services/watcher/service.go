@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"sync"
 	"time"
@@ -17,16 +18,11 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	TOKEN_PRICE_URL = "https://token.ambrosus.io"
-)
-
 //go:generate mockgen -source=service.go -destination=mocks/service_mock.go
 type Service interface {
 	Init(ctx context.Context) error
 
 	TransactionWatch(ctx context.Context, watcherId string, stopChan chan struct{})
-	ApiPriceWatch(ctx context.Context)
 	PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 
 	CreateWatcher(ctx context.Context, pushToken string) error
@@ -39,14 +35,20 @@ type service struct {
 	cloudMessagingSvc cloudmessaging.Service
 	logger            *zap.SugaredLogger
 
-	mx               sync.RWMutex
-	cachedWatcher    map[string]*Watcher
-	cachedChan       map[string]chan struct{}
-	cachedPrice      float64
-	cachedPercentage float64
+	explorerUrl   string
+	tokenPriceUrl string
+
+	mx            sync.RWMutex
+	cachedWatcher map[string]*Watcher
+	cachedChan    map[string]chan struct{}
 }
 
-func NewService(repository Repository, cloudMessagingSvc cloudmessaging.Service, logger *zap.SugaredLogger) (Service, error) {
+func NewService(
+	repository Repository,
+	cloudMessagingSvc cloudmessaging.Service,
+	logger *zap.SugaredLogger,
+	explorerUrl string,
+	tokenPriceUrl string) (Service, error) {
 	if repository == nil {
 		return nil, errors.New("[watcher_service] invalid repository")
 	}
@@ -56,29 +58,27 @@ func NewService(repository Repository, cloudMessagingSvc cloudmessaging.Service,
 	if logger == nil {
 		return nil, errors.New("[watcher_service] invalid logger")
 	}
+	if explorerUrl == "" {
+		return nil, errors.New("[watcher_service] invalid explorer url")
+	}
+	if tokenPriceUrl == "" {
+		return nil, errors.New("[watcher_service] invalid token price url")
+	}
 
 	return &service{
 		repository:        repository,
 		cloudMessagingSvc: cloudMessagingSvc,
 		logger:            logger,
 
-		cachedChan:       make(map[string]chan struct{}),
-		cachedWatcher:    make(map[string]*Watcher),
-		cachedPrice:      0,
-		cachedPercentage: 0,
+		explorerUrl:   explorerUrl,
+		tokenPriceUrl: tokenPriceUrl,
+
+		cachedChan:    make(map[string]chan struct{}),
+		cachedWatcher: make(map[string]*Watcher),
 	}, nil
 }
 
 func (s *service) Init(ctx context.Context) error {
-	var priceData *PriceData
-	if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
-		return err
-	}
-
-	if priceData != nil {
-		s.cachedPrice = priceData.Data.PriceUSD
-	}
-
 	page := 1
 	for {
 		watchers, err := s.repository.GetWatcherList(ctx, bson.M{}, page)
@@ -99,28 +99,7 @@ func (s *service) Init(ctx context.Context) error {
 		page++
 	}
 
-	go s.ApiPriceWatch(ctx)
-
 	return nil
-}
-
-func (s *service) ApiPriceWatch(ctx context.Context) {
-	for {
-		var priceData *PriceData
-		if err := s.doRequest(TOKEN_PRICE_URL, &priceData); err != nil {
-			s.logger.Errorln(err)
-		}
-
-		if priceData != nil {
-			percentage := (priceData.Data.PriceUSD - s.cachedPrice) / s.cachedPrice * 100
-
-			s.cachedPrice = priceData.Data.PriceUSD
-			s.cachedPercentage = percentage
-		}
-
-		// time.Sleep(1 * time.Minute)
-		time.Sleep(5 * time.Minute)
-	}
 }
 
 func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{}) {
@@ -130,46 +109,77 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 			// fmt.Println("Stopping price goroutine...")
 			return
 		default:
+			s.mx.RLock()
 			watcher, ok := s.cachedWatcher[watcherId]
 			if !ok {
 				continue
 			}
+			s.mx.RUnlock()
 
-			if watcher != nil && watcher.Threshold != nil {
-				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
-				if err != nil {
+			if watcher != nil && watcher.Threshold != nil && watcher.TokenPrice != nil {
+				var priceData *PriceData
+				if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
 					s.logger.Errorln(err)
 				}
 
-				if s.cachedPercentage >= float64(*watcher.Threshold) {
-					data := map[string]interface{}{"type": "price-alert", "percentage": s.cachedPercentage}
+				if priceData != nil {
+					percentage := (priceData.Data.PriceUSD - *watcher.TokenPrice) / *watcher.TokenPrice * 100
+					roundedPercentage := math.Round(percentage*100) / 100
 
-					response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price increased on %v percent\n", s.cachedPercentage), string(decodedPushToken), data)
+					decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
 					if err != nil {
 						s.logger.Errorln(err)
 					}
 
-					if response != nil {
-						s.logger.Infof("Price notification successfully sent")
+					if percentage >= float64(*watcher.Threshold) {
+						watcher.SetTokenPrice(priceData.Data.PriceUSD)
+
+						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+							s.logger.Errorln(err)
+						}
+
+						s.mx.Lock()
+						s.cachedWatcher[watcherId] = watcher
+						s.mx.Unlock()
+
+						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
+
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("🚀 AMB Price changed on +%v percent\n", roundedPercentage), string(decodedPushToken), data)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						if response != nil {
+							s.logger.Infof("Price notification successfully sent")
+						}
 					}
-				}
 
-				if s.cachedPercentage <= -float64(*watcher.Threshold) {
-					data := map[string]interface{}{"type": "price-alert", "percentage": s.cachedPercentage}
+					if percentage <= -float64(*watcher.Threshold) {
+						watcher.SetTokenPrice(priceData.Data.PriceUSD)
 
-					response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("Price decrease on %v percent tx\n", s.cachedPercentage), string(decodedPushToken), data)
-					if err != nil {
-						s.logger.Errorln(err)
-					}
+						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+							s.logger.Errorln(err)
+						}
 
-					if response != nil {
-						s.logger.Infof("Price notification successfully sent")
+						s.mx.Lock()
+						s.cachedWatcher[watcherId] = watcher
+						s.mx.Unlock()
+
+						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
+
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("🔻 AMB Price changed on -%v percent tx\n", roundedPercentage), string(decodedPushToken), data)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						if response != nil {
+							s.logger.Infof("Price notification successfully sent")
+						}
 					}
 				}
 			}
 
-			time.Sleep(330 * time.Second)
-			// time.Sleep(90 * time.Second)
+			time.Sleep(5 * time.Minute)
 		}
 	}
 }
@@ -191,7 +201,8 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 			if watcher != nil && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
 				for _, address := range *watcher.Addresses {
 					var apiAddressData *ApiAddressData
-					if err := s.doRequest(fmt.Sprintf("https://explorer-v2-api.ambrosus-test.io/v2/addresses/%s/all", address.Address), &apiAddressData); err != nil {
+
+					if err := s.doRequest(fmt.Sprintf("%s/addresses/%s/all", s.explorerUrl, address.Address), &apiAddressData); err != nil {
 						s.logger.Errorln(err)
 					}
 
@@ -210,7 +221,7 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 								}
 
 								s.mx.Lock()
-								s.cachedWatcher[watcher.ID.Hex()] = watcher
+								s.cachedWatcher[watcherId] = watcher
 								s.mx.Unlock()
 
 								data := map[string]interface{}{"type": "transaction-alert"}
@@ -220,7 +231,7 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 									s.logger.Errorln(err)
 								}
 
-								response, err := s.cloudMessagingSvc.SendMessage(ctx, "Transaction Alert", fmt.Sprintf("You have new tx: %s", missedTx[0].Hash), string(decodedPushToken), data)
+								response, err := s.cloudMessagingSvc.SendMessage(ctx, "AMB-Net Tx Alert", fmt.Sprintf("From: %s\nTo: %s\nAmount: %v", missedTx[0].From, missedTx[0].To, missedTx[0].Value.Ether), string(decodedPushToken), data)
 								if err != nil {
 									s.logger.Errorln(err)
 								}
@@ -260,6 +271,17 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return err
 	}
 
+	watcher.SetThreshold(5)
+
+	var priceData *PriceData
+	if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
+		return err
+	}
+
+	if priceData != nil {
+		watcher.SetTokenPrice(priceData.Data.PriceUSD)
+	}
+
 	if err := s.repository.CreateWatcher(ctx, watcher); err != nil {
 		return err
 	}
@@ -297,7 +319,7 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 			watcher.AddAddress(address)
 
 			var apiAddressData *ApiAddressData
-			if err := s.doRequest(fmt.Sprintf("https://explorer-v2-api.ambrosus-test.io/v2/addresses/%s/all", address), &apiAddressData); err != nil {
+			if err := s.doRequest(fmt.Sprintf("%s/addresses/%s/all", s.explorerUrl, address), &apiAddressData); err != nil {
 				s.logger.Errorln(err)
 			}
 
@@ -353,10 +375,9 @@ func (s *service) DeleteWatcher(ctx context.Context, pushToken string) error {
 
 func (s *service) sentUpStopChanAndStartWatchers(ctx context.Context, watcher *Watcher) {
 	s.mx.Lock()
-	defer s.mx.Unlock()
-
 	stopChan := make(chan struct{})
 	s.cachedChan[watcher.ID.Hex()] = stopChan
+	s.mx.Unlock()
 
 	go s.TransactionWatch(ctx, watcher.ID.Hex(), stopChan)
 	go s.PriceWatch(ctx, watcher.ID.Hex(), stopChan)
