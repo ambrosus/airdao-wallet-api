@@ -12,6 +12,8 @@ func TestInit(t *testing.T) {
 	type env struct {
 		environment      string
 		port             string
+		explorerApi      string
+		tokenPriceUrl    string
 		mongoDbName      string
 		mongoDbUrl       string
 		firebaseCredPath string
@@ -25,6 +27,8 @@ func TestInit(t *testing.T) {
 	setEnv := func(env env) {
 		os.Setenv("APP_ENV", env.environment)
 		os.Setenv("PORT", env.port)
+		os.Setenv("EXPLORER_API", env.explorerApi)
+		os.Setenv("TOKEN_PRICE_URL", env.tokenPriceUrl)
 		os.Setenv("MONGO_DB_NAME", env.mongoDbName)
 		os.Setenv("MONGO_DB_URL", env.mongoDbUrl)
 		os.Setenv("FIREBASE_CRED_PATH", env.firebaseCredPath)
@@ -43,6 +47,8 @@ func TestInit(t *testing.T) {
 				env: env{
 					environment:      "development",
 					port:             "5000",
+					explorerApi:      "http://example.com/v2",
+					tokenPriceUrl:    "http://example.com/v2",
 					mongoDbName:      "example",
 					mongoDbUrl:       "http://127.0.0.1",
 					firebaseCredPath: "./example.json",
@@ -50,8 +56,10 @@ func TestInit(t *testing.T) {
 				},
 			},
 			want: &config.Config{
-				Environment: "development",
-				Port:        "5000",
+				Environment:   "development",
+				Port:          "5000",
+				ExplorerApi:   "http://example.com/v2",
+				TokenPriceUrl: "http://example.com/v2",
 				MongoDb: config.MongoDb{
 					MongoDbName: "example",
 					MongoDbUrl:  "http://127.0.0.1",

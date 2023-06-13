@@ -20,8 +20,9 @@ type HistoryNotification struct {
 type Watcher struct {
 	ID primitive.ObjectID `bson:"_id"`
 
-	PushToken string `bson:"push_token"`
-	Threshold *int   `bson:"threshold"`
+	PushToken  string   `bson:"push_token"`
+	Threshold  *int     `bson:"threshold"`
+	TokenPrice *float64 `bson:"token_price"`
 
 	Addresses *[]*Address `bson:"addresses"`
 
@@ -39,8 +40,9 @@ func NewWatcher(pushToken string) (*Watcher, error) {
 	return &Watcher{
 		ID: primitive.NewObjectID(),
 
-		PushToken: pushToken,
-		Threshold: nil,
+		PushToken:  pushToken,
+		Threshold:  nil,
+		TokenPrice: nil,
 
 		Addresses:            nil,
 		HistoryNotifications: nil,
@@ -84,5 +86,10 @@ func (w *Watcher) SetLastTx(address string, tx string) {
 
 func (w *Watcher) SetThreshold(threshold int) {
 	w.Threshold = &threshold
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetTokenPrice(price float64) {
+	w.TokenPrice = &price
 	w.UpdatedAt = time.Now()
 }
