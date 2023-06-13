@@ -2,6 +2,7 @@ package watcher
 
 import (
 	"errors"
+	"net/url"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -19,9 +20,33 @@ func NewHandler(service Service) (*Handler, error) {
 }
 
 func (h *Handler) SetupRoutes(router fiber.Router) {
+	router.Get("/watcher/:token", h.GetWatcherHandler)
+
 	router.Post("/watcher", h.CreateWatcherHandler)
 	router.Put("/watcher", h.UpdateWatcherHandler)
+
 	router.Delete("/watcher", h.DeleteWatcherHandler)
+	router.Delete("/watcher-addresses", h.DeleteWatcherAddressesHandler)
+}
+
+func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
+	paramToken := c.Params("token")
+
+	decodedParamToken, err := url.QueryUnescape(paramToken)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if decodedParamToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid params"})
+	}
+
+	watcher, err := h.service.GetWatcher(c.Context(), decodedParamToken)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(watcher)
 }
 
 type CreateWatcher struct {
@@ -92,6 +117,31 @@ func (h *Handler) DeleteWatcherHandler(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.DeleteWatcher(c.Context(), reqBody.PushToken); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"status": "OK"})
+}
+
+type DeleteWatcherAddresses struct {
+	PushToken string   `json:"push_token" validate:"required"`
+	Addresses []string `json:"addresses" validate:"required,addresses"`
+}
+
+func (h *Handler) DeleteWatcherAddressesHandler(c *fiber.Ctx) error {
+	var reqBody DeleteWatcherAddresses
+
+	if err := c.BodyParser(&reqBody); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	if err := Validate(reqBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if err := h.service.DeleteWatcherAddresses(c.Context(), reqBody.PushToken, reqBody.Addresses); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 

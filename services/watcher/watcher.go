@@ -8,28 +8,30 @@ import (
 )
 
 type Address struct {
-	Address string  `bson:"address"`
-	LastTx  *string `bson:"last_tx"`
+	Address string  `json:"address" bson:"address"`
+	LastTx  *string `json:"last_tx" bson:"last_tx"`
 }
 
 type HistoryNotification struct {
-	Body      string    `bson:"body"`
-	Timestamp time.Time `bson:"timestamp"`
+	Title     string    `json:"title" bson:"title"`
+	Body      string    `json:"body" bson:"body"`
+	Sent      bool      `json:"sent" bson:"sent"`
+	Timestamp time.Time `json:"timestamp" bson:"timestamp"`
 }
 
 type Watcher struct {
-	ID primitive.ObjectID `bson:"_id"`
+	ID primitive.ObjectID `json:"id" bson:"_id"`
 
-	PushToken  string   `bson:"push_token"`
-	Threshold  *int     `bson:"threshold"`
-	TokenPrice *float64 `bson:"token_price"`
+	PushToken  string   `json:"push_token" bson:"push_token"`
+	Threshold  *int     `json:"threshold" bson:"threshold"`
+	TokenPrice *float64 `json:"token_price" bson:"token_price"`
 
-	Addresses *[]*Address `bson:"addresses"`
+	Addresses *[]*Address `json:"addresses" bson:"addresses"`
 
-	HistoryNotifications *[]*HistoryNotification `bson:"history_notifications"`
+	HistoryNotifications *[]*HistoryNotification `json:"history_notifications" bson:"history_notifications"`
 
-	CreatedAt time.Time `bson:"created_at"`
-	UpdatedAt time.Time `bson:"updated_at"`
+	CreatedAt time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
 }
 
 func NewWatcher(pushToken string) (*Watcher, error) {
@@ -64,14 +66,15 @@ func (w *Watcher) AddAddress(address string) {
 }
 
 func (w *Watcher) DeleteAddress(address string) {
-	for i, v := range *w.Addresses {
-		if v.Address == address {
-			*w.Addresses = append((*w.Addresses)[:i], (*w.Addresses)[i+1:]...)
-			break
+	if w.Addresses != nil {
+		for i, v := range *w.Addresses {
+			if v.Address == address {
+				*w.Addresses = append((*w.Addresses)[:i], (*w.Addresses)[i+1:]...)
+				w.UpdatedAt = time.Now()
+				break
+			}
 		}
 	}
-
-	w.UpdatedAt = time.Now()
 }
 
 func (w *Watcher) SetLastTx(address string, tx string) {
@@ -91,5 +94,21 @@ func (w *Watcher) SetThreshold(threshold int) {
 
 func (w *Watcher) SetTokenPrice(price float64) {
 	w.TokenPrice = &price
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) AddNotification(title, body string, sent bool, timestamp time.Time) {
+	if w.HistoryNotifications == nil {
+		w.HistoryNotifications = &[]*HistoryNotification{{
+			Title:     title,
+			Body:      body,
+			Sent:      sent,
+			Timestamp: timestamp,
+		}}
+	} else {
+		*w.HistoryNotifications = append((*w.HistoryNotifications), &HistoryNotification{
+			Title: title, Body: body, Sent: sent, Timestamp: timestamp,
+		})
+	}
 	w.UpdatedAt = time.Now()
 }

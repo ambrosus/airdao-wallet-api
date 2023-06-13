@@ -25,9 +25,11 @@ type Service interface {
 	TransactionWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 	PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 
+	GetWatcher(ctx context.Context, pushToken string) (*Watcher, error)
 	CreateWatcher(ctx context.Context, pushToken string) error
-	UpdateWatcher(ctx context.Context, pushToken string, address *[]string, threshold *int) error
+	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *int) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
+	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
 }
 
 type service struct {
@@ -132,7 +134,23 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					}
 
 					if percentage >= float64(*watcher.Threshold) {
+						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
+
+						title := "Price Alert"
+						body := fmt.Sprintf("🚀 AMB Price changed on +%v percent\n", roundedPercentage)
+						sent := false
+
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						if response != nil {
+							sent = true
+						}
+
 						watcher.SetTokenPrice(priceData.Data.PriceUSD)
+						watcher.AddNotification(title, body, sent, time.Now())
 
 						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 							s.logger.Errorln(err)
@@ -142,20 +160,26 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						s.cachedWatcher[watcherId] = watcher
 						s.mx.Unlock()
 
-						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
-
-						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("🚀 AMB Price changed on +%v percent\n", roundedPercentage), string(decodedPushToken), data)
-						if err != nil {
-							s.logger.Errorln(err)
-						}
-
-						if response != nil {
-							s.logger.Infof("Price notification successfully sent")
-						}
 					}
 
 					if percentage <= -float64(*watcher.Threshold) {
+						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
+
+						title := "Price Alert"
+						body := fmt.Sprintf("🔻 AMB Price changed on -%v percent tx\n", roundedPercentage)
+						sent := false
+
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						if response != nil {
+							sent = true
+						}
+
 						watcher.SetTokenPrice(priceData.Data.PriceUSD)
+						watcher.AddNotification(title, body, sent, time.Now())
 
 						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 							s.logger.Errorln(err)
@@ -164,17 +188,6 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						s.mx.Lock()
 						s.cachedWatcher[watcherId] = watcher
 						s.mx.Unlock()
-
-						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
-
-						response, err := s.cloudMessagingSvc.SendMessage(ctx, "Price Alert", fmt.Sprintf("🔻 AMB Price changed on -%v percent tx\n", roundedPercentage), string(decodedPushToken), data)
-						if err != nil {
-							s.logger.Errorln(err)
-						}
-
-						if response != nil {
-							s.logger.Infof("Price notification successfully sent")
-						}
 					}
 				}
 			}
@@ -214,7 +227,28 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 							if address.LastTx == nil || (*address.LastTx != apiAddressData.Data[i].Hash && (i+1) < len(apiAddressData.Data) && *address.LastTx == apiAddressData.Data[i+1].Hash) {
 								missedTx = append(missedTx, apiAddressData.Data[i])
 
+								data := map[string]interface{}{"type": "transaction-alert"}
+
+								decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
+								if err != nil {
+									s.logger.Errorln(err)
+								}
+
+								title := "AMB-Net Tx Alert"
+								body := fmt.Sprintf("Missed %v tx\nFrom: %s\nTo: %s\nAmount: %v", len(missedTx), missedTx[0].From, missedTx[0].To, missedTx[0].Value.Ether)
+								sent := false
+
+								response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+								if err != nil {
+									s.logger.Errorln(err)
+								}
+
+								if response != nil {
+									sent = true
+								}
+
 								watcher.SetLastTx(address.Address, missedTx[0].Hash)
+								watcher.AddNotification(title, body, sent, time.Now())
 
 								if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 									s.logger.Errorln(err)
@@ -223,22 +257,6 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 								s.mx.Lock()
 								s.cachedWatcher[watcherId] = watcher
 								s.mx.Unlock()
-
-								data := map[string]interface{}{"type": "transaction-alert"}
-
-								decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
-								if err != nil {
-									s.logger.Errorln(err)
-								}
-
-								response, err := s.cloudMessagingSvc.SendMessage(ctx, "AMB-Net Tx Alert", fmt.Sprintf("From: %s\nTo: %s\nAmount: %v", missedTx[0].From, missedTx[0].To, missedTx[0].Value.Ether), string(decodedPushToken), data)
-								if err != nil {
-									s.logger.Errorln(err)
-								}
-
-								if response != nil {
-									s.logger.Infof("Transaction notification successfully sent")
-								}
 
 								break
 							}
@@ -255,8 +273,24 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 	}
 }
 
+func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, error) {
+	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
+
+	watcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
+	if err != nil {
+		return nil, err
+	}
+
+	if watcher == nil {
+		return nil, errors.New("watcher not found")
+	}
+
+	return watcher, nil
+}
+
 func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
+
 	dbWatcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
 	if err != nil {
 		return err
@@ -311,7 +345,7 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 			if watcher.Addresses != nil {
 				for _, v := range *watcher.Addresses {
 					if address == v.Address {
-						return errors.New("address already is watched")
+						return errors.New("address already is watching")
 					}
 				}
 			}
@@ -369,6 +403,35 @@ func (s *service) DeleteWatcher(ctx context.Context, pushToken string) error {
 	close(watcherStopChan)
 	delete(s.cachedWatcher, watcher.ID.Hex())
 	delete(s.cachedChan, watcher.ID.Hex())
+
+	return nil
+}
+
+func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error {
+	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
+
+	filters := bson.M{"push_token": encodePushToken}
+
+	watcher, err := s.repository.GetWatcher(ctx, filters)
+	if err != nil {
+		return err
+	}
+
+	if watcher == nil {
+		return errors.New("watcher not found")
+	}
+
+	for _, address := range addresses {
+		watcher.DeleteAddress(address)
+	}
+
+	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+		return err
+	}
+
+	s.mx.Lock()
+	s.cachedWatcher[watcher.ID.Hex()] = watcher
+	s.mx.Unlock()
 
 	return nil
 }
