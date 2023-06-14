@@ -27,3 +27,7 @@ type PriceData struct {
 		PriceUSD float64 `json:"price_usd"`
 	} `json:"data"`
 }
+
+type CGData struct {
+	Prices [][]float64 `json:"prices"`
+}

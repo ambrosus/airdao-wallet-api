@@ -21,6 +21,7 @@ func NewHandler(service Service) (*Handler, error) {
 
 func (h *Handler) SetupRoutes(router fiber.Router) {
 	router.Get("/watcher/:token", h.GetWatcherHandler)
+	router.Get("/watcher-history-prices", h.GetWatcherHistoryPricesHandler)
 
 	router.Post("/watcher", h.CreateWatcherHandler)
 	router.Put("/watcher", h.UpdateWatcherHandler)
@@ -47,6 +48,10 @@ func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(watcher)
+}
+
+func (h *Handler) GetWatcherHistoryPricesHandler(c *fiber.Ctx) error {
+	return c.JSON(h.service.GetWatcherHistoryPrices(c.Context()))
 }
 
 type CreateWatcher struct {
