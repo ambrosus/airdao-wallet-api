@@ -24,8 +24,10 @@ type Service interface {
 
 	TransactionWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 	PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{})
+	CGWatch(ctx context.Context)
 
 	GetWatcher(ctx context.Context, pushToken string) (*Watcher, error)
+	GetWatcherHistoryPrices(ctx context.Context) *CGData
 	CreateWatcher(ctx context.Context, pushToken string) error
 	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *int) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
@@ -43,6 +45,7 @@ type service struct {
 	mx            sync.RWMutex
 	cachedWatcher map[string]*Watcher
 	cachedChan    map[string]chan struct{}
+	cachedCgPrice [][]float64
 }
 
 func NewService(
@@ -77,6 +80,7 @@ func NewService(
 
 		cachedChan:    make(map[string]chan struct{}),
 		cachedWatcher: make(map[string]*Watcher),
+		cachedCgPrice: [][]float64{},
 	}, nil
 }
 
@@ -101,7 +105,22 @@ func (s *service) Init(ctx context.Context) error {
 		page++
 	}
 
+	go s.CGWatch(ctx)
+
 	return nil
+}
+
+func (s *service) CGWatch(ctx context.Context) {
+	for {
+		var cgData *CGData
+		if err := s.doRequest("https://api.coingecko.com/api/v3/coins/amber/market_chart?vs_currency=usd&days=30", &cgData); err != nil {
+			s.logger.Errorln(err)
+		}
+
+		s.cachedCgPrice = cgData.Prices
+
+		time.Sleep(12 * time.Hour)
+	}
 }
 
 func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{}) {
@@ -286,6 +305,10 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 	}
 
 	return watcher, nil
+}
+
+func (s *service) GetWatcherHistoryPrices(ctx context.Context) *CGData {
+	return &CGData{Prices: s.cachedCgPrice}
 }
 
 func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
