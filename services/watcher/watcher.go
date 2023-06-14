@@ -28,7 +28,7 @@ type Watcher struct {
 
 	Addresses *[]*Address `json:"addresses" bson:"addresses"`
 
-	HistoryNotifications *[]*HistoryNotification `json:"history_notifications" bson:"history_notifications"`
+	HistoricalNotifications *[]*HistoryNotification `json:"historical_notifications" bson:"historical_notifications"`
 
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
@@ -46,8 +46,8 @@ func NewWatcher(pushToken string) (*Watcher, error) {
 		Threshold:  nil,
 		TokenPrice: nil,
 
-		Addresses:            nil,
-		HistoryNotifications: nil,
+		Addresses:               nil,
+		HistoricalNotifications: nil,
 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -98,15 +98,15 @@ func (w *Watcher) SetTokenPrice(price float64) {
 }
 
 func (w *Watcher) AddNotification(title, body string, sent bool, timestamp time.Time) {
-	if w.HistoryNotifications == nil {
-		w.HistoryNotifications = &[]*HistoryNotification{{
+	if w.HistoricalNotifications == nil {
+		w.HistoricalNotifications = &[]*HistoryNotification{{
 			Title:     title,
 			Body:      body,
 			Sent:      sent,
 			Timestamp: timestamp,
 		}}
 	} else {
-		*w.HistoryNotifications = append((*w.HistoryNotifications), &HistoryNotification{
+		*w.HistoricalNotifications = append((*w.HistoricalNotifications), &HistoryNotification{
 			Title: title, Body: body, Sent: sent, Timestamp: timestamp,
 		})
 	}
