@@ -21,7 +21,7 @@ func NewHandler(service Service) (*Handler, error) {
 
 func (h *Handler) SetupRoutes(router fiber.Router) {
 	router.Get("/watcher/:token", h.GetWatcherHandler)
-	router.Get("/watcher-history-prices", h.GetWatcherHistoryPricesHandler)
+	router.Get("/watcher-historical-prices", h.GetWatcherHistoryPricesHandler)
 
 	router.Post("/watcher", h.CreateWatcherHandler)
 	router.Put("/watcher", h.UpdateWatcherHandler)
