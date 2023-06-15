@@ -29,7 +29,7 @@ type Service interface {
 	GetWatcher(ctx context.Context, pushToken string) (*Watcher, error)
 	GetWatcherHistoryPrices(ctx context.Context) *CGData
 	CreateWatcher(ctx context.Context, pushToken string) error
-	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *int) error
+	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
 }
@@ -354,7 +354,7 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	return nil
 }
 
-func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *int) error {
+func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
 
 	watcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
