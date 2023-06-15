@@ -254,7 +254,11 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 								}
 
 								title := "AMB-Net Tx Alert"
-								body := fmt.Sprintf("Missed %v tx\nFrom: %s\nTo: %s\nAmount: %v", len(missedTx), missedTx[0].From, missedTx[0].To, missedTx[0].Value.Ether)
+								cutFromAddress := fmt.Sprintf("%s...%s", missedTx[0].From[:5], missedTx[0].From[len(missedTx[0].From)-5:])
+								cutToAddress := fmt.Sprintf("%s...%s", missedTx[0].To[:5], missedTx[0].To[len(missedTx[0].From)-5:])
+								roundedAmount := math.Round(missedTx[0].Value.Ether*100) / 100
+
+								body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %v", cutFromAddress, cutToAddress, roundedAmount)
 								sent := false
 
 								response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
