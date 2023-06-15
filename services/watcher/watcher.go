@@ -23,7 +23,7 @@ type Watcher struct {
 	ID primitive.ObjectID `json:"id" bson:"_id"`
 
 	PushToken  string   `json:"push_token" bson:"push_token"`
-	Threshold  *int     `json:"threshold" bson:"threshold"`
+	Threshold  *float64 `json:"threshold" bson:"threshold"`
 	TokenPrice *float64 `json:"token_price" bson:"token_price"`
 
 	Addresses *[]*Address `json:"addresses" bson:"addresses"`
@@ -87,7 +87,7 @@ func (w *Watcher) SetLastTx(address string, tx string) {
 	w.UpdatedAt = time.Now()
 }
 
-func (w *Watcher) SetThreshold(threshold int) {
+func (w *Watcher) SetThreshold(threshold float64) {
 	w.Threshold = &threshold
 	w.UpdatedAt = time.Now()
 }

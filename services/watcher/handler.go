@@ -82,7 +82,7 @@ type UpdateWatcher struct {
 	PushToken string    `json:"push_token" validate:"required"`
 	Addresses *[]string `json:"addresses" validate:"omitempty,addresses"`
 	// Threshold *int      `json:"threshold" validate:"omitempty,threshold"`
-	Threshold *int `json:"threshold" validate:"omitempty"`
+	Threshold *float64 `json:"threshold" validate:"omitempty"`
 }
 
 func (h *Handler) UpdateWatcherHandler(c *fiber.Ctx) error {
