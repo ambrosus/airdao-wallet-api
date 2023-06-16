@@ -253,11 +253,11 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 
 					if apiAddressData != nil && len(apiAddressData.Data) > 0 {
 
-						missedTx := []Tx{}
+						missedTxs := []Tx{}
 
 						for i := range apiAddressData.Data {
 							if address.LastTx == nil || (*address.LastTx != apiAddressData.Data[i].Hash && (i+1) < len(apiAddressData.Data) && *address.LastTx == apiAddressData.Data[i+1].Hash) {
-								missedTx = append(missedTx, apiAddressData.Data[i])
+								missedTxs = append(missedTxs, apiAddressData.Data[i])
 
 								data := map[string]interface{}{"type": "transaction-alert"}
 
@@ -266,38 +266,44 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 									s.logger.Errorln(err)
 								}
 
-								title := "AMB-Net Tx Alert"
-								cutFromAddress := fmt.Sprintf("%s...%s", missedTx[0].From[:5], missedTx[0].From[len(missedTx[0].From)-5:])
-								cutToAddress := fmt.Sprintf("%s...%s", missedTx[0].To[:5], missedTx[0].To[len(missedTx[0].From)-5:])
-								roundedAmount := math.Round(missedTx[0].Value.Ether*100) / 100
+								for _, missedTx := range missedTxs {
+									if len(missedTx.From) == 0 || missedTx.From == "" {
+										continue
+									}
 
-								body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %v", cutFromAddress, cutToAddress, roundedAmount)
-								sent := false
+									title := "AMB-Net Tx Alert"
+									cutFromAddress := fmt.Sprintf("%s...%s", missedTx.From[:5], missedTx.From[len(missedTx.From)-5:])
+									cutToAddress := fmt.Sprintf("%s...%s", missedTx.To[:5], missedTx.To[len(missedTx.From)-5:])
+									roundedAmount := math.Round(missedTx.Value.Ether*100) / 100
 
-								response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-								if err != nil {
-									s.logger.Errorln(err)
+									body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %v", cutFromAddress, cutToAddress, roundedAmount)
+									sent := false
+
+									response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+									if err != nil {
+										s.logger.Errorln(err)
+									}
+
+									if response != nil {
+										sent = true
+									}
+
+									watcher.SetLastTx(address.Address, missedTx.Hash)
+									watcher.AddNotification(title, body, sent, time.Now())
+
+									if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+										s.logger.Errorln(err)
+									}
+
+									s.mx.Lock()
+									s.cachedWatcher[watcherId] = watcher
+									s.mx.Unlock()
 								}
-
-								if response != nil {
-									sent = true
-								}
-
-								watcher.SetLastTx(address.Address, missedTx[0].Hash)
-								watcher.AddNotification(title, body, sent, time.Now())
-
-								if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
-									s.logger.Errorln(err)
-								}
-
-								s.mx.Lock()
-								s.cachedWatcher[watcherId] = watcher
-								s.mx.Unlock()
 
 								break
 							}
 
-							missedTx = append(missedTx, apiAddressData.Data[i])
+							missedTxs = append(missedTxs, apiAddressData.Data[i])
 
 						}
 					}
