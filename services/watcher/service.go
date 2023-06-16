@@ -29,7 +29,7 @@ type Service interface {
 	GetWatcher(ctx context.Context, pushToken string) (*Watcher, error)
 	GetWatcherHistoryPrices(ctx context.Context) *CGData
 	CreateWatcher(ctx context.Context, pushToken string) error
-	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64) error
+	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, notification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
 }
@@ -135,6 +135,10 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 			if !ok {
 				continue
 			}
+
+			if *watcher.Notification == "off" {
+				continue
+			}
 			s.mx.RUnlock()
 
 			if watcher != nil && watcher.Threshold != nil && watcher.TokenPrice != nil {
@@ -145,7 +149,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 
 				if priceData != nil {
 					percentage := (priceData.Data.PriceUSD - *watcher.TokenPrice) / *watcher.TokenPrice * 100
-					roundedPercentage := math.Round(percentage*100) / 100
+					roundedPercentage := math.Abs((math.Round(percentage*100) / 100))
 
 					decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
 					if err != nil {
@@ -226,6 +230,10 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 			s.mx.RLock()
 			watcher, ok := s.cachedWatcher[watcherId]
 			if !ok {
+				continue
+			}
+
+			if *watcher.Notification == "off" {
 				continue
 			}
 			s.mx.RUnlock()
@@ -333,6 +341,7 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	}
 
 	watcher.SetThreshold(5)
+	watcher.SetNotification("on")
 
 	var priceData *PriceData
 	if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
@@ -354,7 +363,7 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	return nil
 }
 
-func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64) error {
+func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, notification *string) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
 
 	watcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
@@ -366,7 +375,7 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 		return errors.New("watcher not found")
 	}
 
-	if addresses != nil {
+	if addresses != nil && len(*addresses) > 0 {
 		for _, address := range *addresses {
 
 			if watcher.Addresses != nil {
@@ -392,6 +401,10 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 
 	if threshold != nil && (watcher.Threshold == nil || *threshold != *watcher.Threshold) {
 		watcher.SetThreshold(*threshold)
+	}
+
+	if notification != nil && *notification != "" {
+		watcher.SetNotification(*notification)
 	}
 
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
