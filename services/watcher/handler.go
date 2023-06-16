@@ -82,7 +82,9 @@ type UpdateWatcher struct {
 	PushToken string    `json:"push_token" validate:"required"`
 	Addresses *[]string `json:"addresses" validate:"omitempty,addresses"`
 	// Threshold *int      `json:"threshold" validate:"omitempty,threshold"`
-	Threshold *float64 `json:"threshold" validate:"omitempty"`
+	Threshold         *float64 `json:"threshold" validate:"omitempty"`
+	TxNotification    *string  `json:"tx_notification" validate:"omitempty,notification"`
+	PriceNotification *string  `json:"price_notification" validate:"omitempty,notification"`
 }
 
 func (h *Handler) UpdateWatcherHandler(c *fiber.Ctx) error {
@@ -98,7 +100,7 @@ func (h *Handler) UpdateWatcherHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if err := h.service.UpdateWatcher(c.Context(), reqBody.PushToken, reqBody.Addresses, reqBody.Threshold); err != nil {
+	if err := h.service.UpdateWatcher(c.Context(), reqBody.PushToken, reqBody.Addresses, reqBody.Threshold, reqBody.TxNotification, reqBody.PriceNotification); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
