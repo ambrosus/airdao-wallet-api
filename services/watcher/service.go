@@ -18,6 +18,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	ON  = "on"
+	OFF = "off"
+)
+
 //go:generate mockgen -source=service.go -destination=mocks/service_mock.go
 type Service interface {
 	Init(ctx context.Context) error
@@ -29,7 +34,7 @@ type Service interface {
 	GetWatcher(ctx context.Context, pushToken string) (*Watcher, error)
 	GetWatcherHistoryPrices(ctx context.Context) *CGData
 	CreateWatcher(ctx context.Context, pushToken string) error
-	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, notification *string) error
+	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
 }
@@ -132,14 +137,14 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 		default:
 			s.mx.RLock()
 			watcher, ok := s.cachedWatcher[watcherId]
+			s.mx.RUnlock()
 			if !ok {
 				continue
 			}
 
-			if *watcher.Notification == "off" {
+			if *watcher.PriceNotification == OFF {
 				continue
 			}
-			s.mx.RUnlock()
 
 			if watcher != nil && watcher.Threshold != nil && watcher.TokenPrice != nil {
 				var priceData *PriceData
@@ -229,14 +234,14 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 		default:
 			s.mx.RLock()
 			watcher, ok := s.cachedWatcher[watcherId]
+			s.mx.RUnlock()
 			if !ok {
 				continue
 			}
 
-			if *watcher.Notification == "off" {
+			if *watcher.TxNotification == OFF {
 				continue
 			}
-			s.mx.RUnlock()
 
 			if watcher != nil && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
 				for _, address := range *watcher.Addresses {
@@ -341,7 +346,8 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	}
 
 	watcher.SetThreshold(5)
-	watcher.SetNotification("on")
+	watcher.SetTxNotification(ON)
+	watcher.SetPriceNotification(ON)
 
 	var priceData *PriceData
 	if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
@@ -363,7 +369,7 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	return nil
 }
 
-func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, notification *string) error {
+func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
 
 	watcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
@@ -403,8 +409,12 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 		watcher.SetThreshold(*threshold)
 	}
 
-	if notification != nil && *notification != "" {
-		watcher.SetNotification(*notification)
+	if txNotification != nil && *txNotification != "" {
+		watcher.SetTxNotification(*txNotification)
+	}
+
+	if priceNotification != nil && *priceNotification != "" {
+		watcher.SetPriceNotification(*priceNotification)
 	}
 
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {

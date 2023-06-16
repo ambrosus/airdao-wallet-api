@@ -22,10 +22,11 @@ type HistoryNotification struct {
 type Watcher struct {
 	ID primitive.ObjectID `json:"id" bson:"_id"`
 
-	PushToken    string   `json:"push_token" bson:"push_token"`
-	Threshold    *float64 `json:"threshold" bson:"threshold"`
-	TokenPrice   *float64 `json:"token_price" bson:"token_price"`
-	Notification *string  `json:"notification" bson:"notification"`
+	PushToken         string   `json:"push_token" bson:"push_token"`
+	Threshold         *float64 `json:"threshold" bson:"threshold"`
+	TokenPrice        *float64 `json:"token_price" bson:"token_price"`
+	TxNotification    *string  `json:"tx_notification" bson:"tx_notification"`
+	PriceNotification *string  `json:"price_notification" bson:"price_notification"`
 
 	Addresses *[]*Address `json:"addresses" bson:"addresses"`
 
@@ -43,10 +44,11 @@ func NewWatcher(pushToken string) (*Watcher, error) {
 	return &Watcher{
 		ID: primitive.NewObjectID(),
 
-		PushToken:    pushToken,
-		Threshold:    nil,
-		TokenPrice:   nil,
-		Notification: nil,
+		PushToken:         pushToken,
+		Threshold:         nil,
+		TokenPrice:        nil,
+		TxNotification:    nil,
+		PriceNotification: nil,
 
 		Addresses:               nil,
 		HistoricalNotifications: nil,
@@ -115,7 +117,12 @@ func (w *Watcher) AddNotification(title, body string, sent bool, timestamp time.
 	w.UpdatedAt = time.Now()
 }
 
-func (w *Watcher) SetNotification(n string) {
-	w.Notification = &n
+func (w *Watcher) SetTxNotification(v string) {
+	w.TxNotification = &v
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetPriceNotification(v string) {
+	w.PriceNotification = &v
 	w.UpdatedAt = time.Now()
 }
