@@ -102,7 +102,9 @@ func (s *service) Init(ctx context.Context) error {
 		}
 
 		for _, watcher := range watchers {
+			s.mx.Lock()
 			s.cachedWatcher[watcher.ID.Hex()] = watcher
+			s.mx.Unlock()
 
 			s.sentUpStopChanAndStartWatchers(ctx, watcher)
 		}
