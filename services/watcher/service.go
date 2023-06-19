@@ -267,7 +267,7 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 								}
 
 								for _, missedTx := range missedTxs {
-									if len(missedTx.From) == 0 || missedTx.From == "" {
+									if (len(missedTx.From) == 0 || missedTx.From == "") || (len(missedTx.To) == 0 || missedTx.To == "") {
 										continue
 									}
 
