@@ -162,11 +162,11 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					if percentage >= float64(*watcher.Threshold) {
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 
-						title := "Price Alert"
-						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
-						sent := false
-
 						if *watcher.PriceNotification == ON {
+							title := "Price Alert"
+							body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
+							sent := false
+
 							response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 							if err != nil {
 								s.logger.Errorln(err)
@@ -175,10 +175,11 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							if response != nil {
 								sent = true
 							}
+
+							watcher.AddNotification(title, body, sent, time.Now())
 						}
 
 						watcher.SetTokenPrice(priceData.Data.PriceUSD)
-						watcher.AddNotification(title, body, sent, time.Now())
 
 						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 							s.logger.Errorln(err)
@@ -192,11 +193,11 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					if percentage <= -float64(*watcher.Threshold) {
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 
-						title := "Price Alert"
-						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
-						sent := false
-
 						if *watcher.PriceNotification == ON {
+							title := "Price Alert"
+							body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
+							sent := false
+
 							response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 							if err != nil {
 								s.logger.Errorln(err)
@@ -205,10 +206,11 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							if response != nil {
 								sent = true
 							}
+
+							watcher.AddNotification(title, body, sent, time.Now())
 						}
 
 						watcher.SetTokenPrice(priceData.Data.PriceUSD)
-						watcher.AddNotification(title, body, sent, time.Now())
 
 						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 							s.logger.Errorln(err)
@@ -268,15 +270,15 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 										continue
 									}
 
-									title := "AMB-Net Tx Alert"
-									cutFromAddress := fmt.Sprintf("%s...%s", missedTx.From[:5], missedTx.From[len(missedTx.From)-5:])
-									cutToAddress := fmt.Sprintf("%s...%s", missedTx.To[:5], missedTx.To[len(missedTx.From)-5:])
-									roundedAmount := math.Round(missedTx.Value.Ether*100) / 100
-
-									body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %v", cutFromAddress, cutToAddress, roundedAmount)
-									sent := false
-
 									if *watcher.PriceNotification == ON {
+										title := "AMB-Net Tx Alert"
+										cutFromAddress := fmt.Sprintf("%s...%s", missedTx.From[:5], missedTx.From[len(missedTx.From)-5:])
+										cutToAddress := fmt.Sprintf("%s...%s", missedTx.To[:5], missedTx.To[len(missedTx.From)-5:])
+										roundedAmount := math.Round(missedTx.Value.Ether*100) / 100
+
+										body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %v", cutFromAddress, cutToAddress, roundedAmount)
+										sent := false
+
 										response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 										if err != nil {
 											s.logger.Errorln(err)
@@ -285,10 +287,11 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 										if response != nil {
 											sent = true
 										}
+
+										watcher.AddNotification(title, body, sent, time.Now())
 									}
 
 									watcher.SetLastTx(address.Address, missedTx.Hash)
-									watcher.AddNotification(title, body, sent, time.Now())
 
 									if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 										s.logger.Errorln(err)
