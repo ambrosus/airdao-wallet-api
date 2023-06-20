@@ -270,7 +270,7 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 										continue
 									}
 
-									if *watcher.PriceNotification == ON {
+									if *watcher.TxNotification == ON {
 										title := "AMB-Net Tx Alert"
 										cutFromAddress := fmt.Sprintf("%s...%s", missedTx.From[:5], missedTx.From[len(missedTx.From)-5:])
 										cutToAddress := fmt.Sprintf("%s...%s", missedTx.To[:5], missedTx.To[len(missedTx.From)-5:])
