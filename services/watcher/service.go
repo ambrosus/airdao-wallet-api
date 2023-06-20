@@ -144,10 +144,6 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 				continue
 			}
 
-			if *watcher.PriceNotification == OFF {
-				continue
-			}
-
 			if watcher != nil && watcher.Threshold != nil && watcher.TokenPrice != nil {
 				var priceData *PriceData
 				if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
@@ -167,16 +163,18 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 
 						title := "Price Alert"
-						body := fmt.Sprintf("🚀 AMB Price changed on +%v percent\n", roundedPercentage)
+						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
 						sent := false
 
-						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-						if err != nil {
-							s.logger.Errorln(err)
-						}
+						if *watcher.PriceNotification == ON {
+							response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+							if err != nil {
+								s.logger.Errorln(err)
+							}
 
-						if response != nil {
-							sent = true
+							if response != nil {
+								sent = true
+							}
 						}
 
 						watcher.SetTokenPrice(priceData.Data.PriceUSD)
@@ -189,23 +187,24 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						s.mx.Lock()
 						s.cachedWatcher[watcherId] = watcher
 						s.mx.Unlock()
-
 					}
 
 					if percentage <= -float64(*watcher.Threshold) {
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 
 						title := "Price Alert"
-						body := fmt.Sprintf("🔻 AMB Price changed on -%v percent tx\n", roundedPercentage)
+						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
 						sent := false
 
-						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-						if err != nil {
-							s.logger.Errorln(err)
-						}
+						if *watcher.PriceNotification == ON {
+							response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+							if err != nil {
+								s.logger.Errorln(err)
+							}
 
-						if response != nil {
-							sent = true
+							if response != nil {
+								sent = true
+							}
 						}
 
 						watcher.SetTokenPrice(priceData.Data.PriceUSD)
@@ -238,10 +237,6 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 			watcher, ok := s.cachedWatcher[watcherId]
 			s.mx.RUnlock()
 			if !ok {
-				continue
-			}
-
-			if *watcher.TxNotification == OFF {
 				continue
 			}
 
@@ -281,13 +276,15 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 									body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %v", cutFromAddress, cutToAddress, roundedAmount)
 									sent := false
 
-									response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-									if err != nil {
-										s.logger.Errorln(err)
-									}
+									if *watcher.PriceNotification == ON {
+										response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+										if err != nil {
+											s.logger.Errorln(err)
+										}
 
-									if response != nil {
-										sent = true
+										if response != nil {
+											sent = true
+										}
 									}
 
 									watcher.SetLastTx(address.Address, missedTx.Hash)
