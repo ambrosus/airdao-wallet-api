@@ -161,9 +161,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					}
 
 					if percentage >= float64(*watcher.Threshold) {
-						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
-
 						if *watcher.PriceNotification == ON {
+							data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 							title := "Price Alert"
 							body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
 							sent := false
@@ -192,9 +191,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					}
 
 					if percentage <= -float64(*watcher.Threshold) {
-						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
-
 						if *watcher.PriceNotification == ON {
+							data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 							title := "Price Alert"
 							body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
 							sent := false
@@ -259,25 +257,25 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 							if address.LastTx == nil || (*address.LastTx != apiAddressData.Data[i].Hash && (i+1) < len(apiAddressData.Data) && *address.LastTx == apiAddressData.Data[i+1].Hash) {
 								missedTxs = append(missedTxs, apiAddressData.Data[i])
 
-								data := map[string]interface{}{"type": "transaction-alert"}
-
 								decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
 								if err != nil {
 									s.logger.Errorln(err)
 								}
 
-								for _, missedTx := range missedTxs {
-									if (len(missedTx.From) == 0 || missedTx.From == "") || (len(missedTx.To) == 0 || missedTx.To == "") {
+								for i := len(missedTxs) - 1; i >= 0; i-- {
+									if (len(missedTxs[i].From) == 0 || missedTxs[i].From == "") || (len(missedTxs[i].To) == 0 || missedTxs[i].To == "") {
 										continue
 									}
 
 									if *watcher.TxNotification == ON {
-										title := "AMB-Net Tx Alert"
-										cutFromAddress := fmt.Sprintf("%s...%s", missedTx.From[:5], missedTx.From[len(missedTx.From)-5:])
-										cutToAddress := fmt.Sprintf("%s...%s", missedTx.To[:5], missedTx.To[len(missedTx.From)-5:])
-										roundedAmount := strconv.FormatFloat(missedTx.Value.Ether, 'f', 2, 64)
+										data := map[string]interface{}{"type": "transaction-alert", "timestamp": missedTxs[i].Timestamp}
 
-										body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
+										title := "AMB-Net Tx Alert"
+										cutFromAddress := fmt.Sprintf("%s...%s", missedTxs[i].From[:5], missedTxs[i].From[len(missedTxs[i].From)-5:])
+										cutToAddress := fmt.Sprintf("%s...%s", missedTxs[i].To[:5], missedTxs[i].To[len(missedTxs[i].From)-5:])
+										roundedAmount := strconv.FormatFloat(missedTxs[i].Value.Ether, 'f', 2, 64)
+
+										body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
 										sent := false
 
 										response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
@@ -292,7 +290,7 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 										watcher.AddNotification(title, body, sent, time.Now())
 									}
 
-									watcher.SetLastTx(address.Address, missedTx.Hash)
+									watcher.SetLastTx(address.Address, missedTxs[i].Hash)
 
 									if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 										s.logger.Errorln(err)
