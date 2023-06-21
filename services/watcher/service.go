@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -274,9 +275,9 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 										title := "AMB-Net Tx Alert"
 										cutFromAddress := fmt.Sprintf("%s...%s", missedTx.From[:5], missedTx.From[len(missedTx.From)-5:])
 										cutToAddress := fmt.Sprintf("%s...%s", missedTx.To[:5], missedTx.To[len(missedTx.From)-5:])
-										roundedAmount := math.Round(missedTx.Value.Ether*100) / 100
+										roundedAmount := strconv.FormatFloat(missedTx.Value.Ether, 'f', 2, 64)
 
-										body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %v", cutFromAddress, cutToAddress, roundedAmount)
+										body := fmt.Sprintf("tx\nFrom: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
 										sent := false
 
 										response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
