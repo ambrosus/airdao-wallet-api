@@ -15,6 +15,8 @@ type Tx struct {
 	Value     struct {
 		Ether float64 `json:"ether"`
 	} `json:"value"`
+
+	Timestamp float64 `json:"timestamp"`
 }
 
 type ApiAddressData struct {
