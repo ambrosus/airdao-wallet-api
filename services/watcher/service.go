@@ -29,6 +29,7 @@ type Service interface {
 	Init(ctx context.Context) error
 
 	TransactionWatch(ctx context.Context, watcherId string, stopChan chan struct{})
+	ApiPriceWatch(ctx context.Context)
 	PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 	CGWatch(ctx context.Context)
 
@@ -51,6 +52,7 @@ type service struct {
 	mx            sync.RWMutex
 	cachedWatcher map[string]*Watcher
 	cachedChan    map[string]chan struct{}
+	cachedPrice   float64
 	cachedCgPrice [][]float64
 }
 
@@ -86,11 +88,21 @@ func NewService(
 
 		cachedChan:    make(map[string]chan struct{}),
 		cachedWatcher: make(map[string]*Watcher),
+		cachedPrice:   0,
 		cachedCgPrice: [][]float64{},
 	}, nil
 }
 
 func (s *service) Init(ctx context.Context) error {
+	var priceData *PriceData
+	if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
+		return err
+	}
+
+	if priceData != nil {
+		s.cachedPrice = priceData.Data.PriceUSD
+	}
+
 	page := 1
 	for {
 		watchers, err := s.repository.GetWatcherList(ctx, bson.M{}, page)
@@ -114,6 +126,7 @@ func (s *service) Init(ctx context.Context) error {
 	}
 
 	go s.CGWatch(ctx)
+	go s.ApiPriceWatch(ctx)
 
 	return nil
 }
@@ -128,6 +141,21 @@ func (s *service) CGWatch(ctx context.Context) {
 		s.cachedCgPrice = cgData.Prices
 
 		time.Sleep(12 * time.Hour)
+	}
+}
+
+func (s *service) ApiPriceWatch(ctx context.Context) {
+	for {
+		var priceData *PriceData
+		if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
+			s.logger.Errorln(err)
+		}
+
+		if priceData != nil {
+			s.cachedPrice = priceData.Data.PriceUSD
+		}
+
+		time.Sleep(5 * time.Minute)
 	}
 }
 
@@ -146,83 +174,77 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 			}
 
 			if watcher != nil && watcher.Threshold != nil && watcher.TokenPrice != nil {
-				var priceData *PriceData
-				if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
+				percentage := (s.cachedPrice - *watcher.TokenPrice) / *watcher.TokenPrice * 100
+				roundedPercentage := math.Abs((math.Round(percentage*100) / 100))
+
+				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
+				if err != nil {
 					s.logger.Errorln(err)
 				}
 
-				if priceData != nil {
-					percentage := (priceData.Data.PriceUSD - *watcher.TokenPrice) / *watcher.TokenPrice * 100
-					roundedPercentage := math.Abs((math.Round(percentage*100) / 100))
+				if percentage >= float64(*watcher.Threshold) {
+					if *watcher.PriceNotification == ON {
+						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
+						title := "Price Alert"
+						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", s.cachedPrice)
+						sent := false
 
-					decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
-					if err != nil {
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						if response != nil {
+							sent = true
+						}
+
+						watcher.AddNotification(title, body, sent, time.Now())
+					}
+
+					watcher.SetTokenPrice(s.cachedPrice)
+
+					if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 						s.logger.Errorln(err)
 					}
 
-					if percentage >= float64(*watcher.Threshold) {
-						if *watcher.PriceNotification == ON {
-							data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
-							title := "Price Alert"
-							body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
-							sent := false
-
-							response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-							if err != nil {
-								s.logger.Errorln(err)
-							}
-
-							if response != nil {
-								sent = true
-							}
-
-							watcher.AddNotification(title, body, sent, time.Now())
-						}
-
-						watcher.SetTokenPrice(priceData.Data.PriceUSD)
-
-						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
-							s.logger.Errorln(err)
-						}
-
-						s.mx.Lock()
-						s.cachedWatcher[watcherId] = watcher
-						s.mx.Unlock()
-					}
-
-					if percentage <= -float64(*watcher.Threshold) {
-						if *watcher.PriceNotification == ON {
-							data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
-							title := "Price Alert"
-							body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", priceData.Data.PriceUSD)
-							sent := false
-
-							response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-							if err != nil {
-								s.logger.Errorln(err)
-							}
-
-							if response != nil {
-								sent = true
-							}
-
-							watcher.AddNotification(title, body, sent, time.Now())
-						}
-
-						watcher.SetTokenPrice(priceData.Data.PriceUSD)
-
-						if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
-							s.logger.Errorln(err)
-						}
-
-						s.mx.Lock()
-						s.cachedWatcher[watcherId] = watcher
-						s.mx.Unlock()
-					}
+					s.mx.Lock()
+					s.cachedWatcher[watcherId] = watcher
+					s.mx.Unlock()
 				}
+
+				if percentage <= -float64(*watcher.Threshold) {
+					if *watcher.PriceNotification == ON {
+						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
+						title := "Price Alert"
+						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", s.cachedPrice)
+						sent := false
+
+						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+						if err != nil {
+							s.logger.Errorln(err)
+						}
+
+						if response != nil {
+							sent = true
+						}
+
+						watcher.AddNotification(title, body, sent, time.Now())
+					}
+
+					watcher.SetTokenPrice(s.cachedPrice)
+
+					if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+						s.logger.Errorln(err)
+					}
+
+					s.mx.Lock()
+					s.cachedWatcher[watcherId] = watcher
+					s.mx.Unlock()
+				}
+
 			}
 
-			time.Sleep(5 * time.Minute)
+			time.Sleep(330 * time.Second)
 		}
 	}
 }
