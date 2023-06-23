@@ -176,6 +176,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 			if watcher != nil && watcher.Threshold != nil && watcher.TokenPrice != nil {
 				percentage := (s.cachedPrice - *watcher.TokenPrice) / *watcher.TokenPrice * 100
 				roundedPercentage := math.Abs((math.Round(percentage*100) / 100))
+				roundedPrice := strconv.FormatFloat(s.cachedPrice, 'f', 5, 64)
 
 				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
 				if err != nil {
@@ -186,7 +187,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					if *watcher.PriceNotification == ON {
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 						title := "Price Alert"
-						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", s.cachedPrice)
+						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
 						sent := false
 
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
@@ -216,7 +217,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					if *watcher.PriceNotification == ON {
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 						title := "Price Alert"
-						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", s.cachedPrice)
+						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
 						sent := false
 
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
