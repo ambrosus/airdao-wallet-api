@@ -291,11 +291,12 @@ func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopCh
 									}
 
 									if *watcher.TxNotification == ON {
-										data := map[string]interface{}{"type": "transaction-alert", "timestamp": missedTxs[i].Timestamp}
-
-										title := "AMB-Net Tx Alert"
 										cutFromAddress := fmt.Sprintf("%s...%s", missedTxs[i].From[:5], missedTxs[i].From[len(missedTxs[i].From)-5:])
 										cutToAddress := fmt.Sprintf("%s...%s", missedTxs[i].To[:5], missedTxs[i].To[len(missedTxs[i].From)-5:])
+
+										data := map[string]interface{}{"type": "transaction-alert", "timestamp": missedTxs[i].Timestamp, "from": cutFromAddress, "to": cutToAddress}
+
+										title := "AMB-Net Tx Alert"
 										roundedAmount := strconv.FormatFloat(missedTxs[i].Value.Ether, 'f', 2, 64)
 
 										body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
