@@ -8,8 +8,10 @@ import (
 )
 
 type Config struct {
-	Environment string `required:"true" envconfig:"APP_ENV"`
-	Port        string `required:"true" envconfig:"PORT"`
+	Environment   string `required:"true" envconfig:"APP_ENV"`
+	Port          string `required:"true" envconfig:"PORT"`
+	ExplorerApi   string `required:"true" envconfig:"EXPLORER_API"`
+	TokenPriceUrl string `required:"true" envconfig:"TOKEN_PRICE_URL"`
 
 	MongoDb
 	Firebase

@@ -12,10 +12,12 @@ func msgForTag(tag string) string {
 	switch tag {
 	case "required":
 		return "is required"
-	case "address":
+	case "addresses":
 		return "incorrect address"
 	case "threshold":
 		return "incorrect threshold (can be 5, 8 or 10)"
+	case "notification":
+		return "incorrect notification (can be on or off)"
 	}
 	return ""
 }
@@ -23,12 +25,14 @@ func msgForTag(tag string) string {
 func Validate(data interface{}) error {
 	validate := validator.New()
 
-	_ = validate.RegisterValidation("address", func(fl validator.FieldLevel) bool {
-		address := fl.Field().String()
+	_ = validate.RegisterValidation("addresses", func(fl validator.FieldLevel) bool {
+		addresses := fl.Field().Interface().([]string)
 
-		addressBytes := HexToBytes(address)
-		if addressBytes == nil || len(addressBytes) != 20 {
-			return false
+		for _, address := range addresses {
+			addressBytes := HexToBytes(address)
+			if addressBytes == nil || len(addressBytes) != 20 {
+				return false
+			}
 		}
 
 		return true
@@ -38,6 +42,16 @@ func Validate(data interface{}) error {
 		threshold := fl.Field().Int()
 
 		if threshold == 5 || threshold == 8 || threshold == 10 {
+			return true
+		}
+
+		return false
+	})
+
+	_ = validate.RegisterValidation("notification", func(fl validator.FieldLevel) bool {
+		notification := fl.Field().String()
+
+		if notification == "on" || notification == "off" {
 			return true
 		}
 

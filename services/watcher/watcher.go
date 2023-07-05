@@ -7,58 +7,122 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Watcher struct {
-	ID        primitive.ObjectID `bson:"_id"`
-	Address   string             `bson:"address"`
-	PushToken string             `bson:"push_token"`
-
-	LastTx    *string `bson:"last_tx"`
-	Threshold *int    `bson:"threshold"`
-
-	CreatedAt time.Time `bson:"created_at"`
-	UpdatedAt time.Time `bson:"updated_at"`
+type Address struct {
+	Address string  `json:"address" bson:"address"`
+	LastTx  *string `json:"last_tx" bson:"last_tx"`
 }
 
-func NewWatcher(address, pushToken string, threshold *int) (*Watcher, error) {
-	if address == "" {
-		return nil, errors.New("invalid address")
-	}
+type HistoryNotification struct {
+	Title     string    `json:"title" bson:"title"`
+	Body      string    `json:"body" bson:"body"`
+	Sent      bool      `json:"sent" bson:"sent"`
+	Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+}
+
+type Watcher struct {
+	ID primitive.ObjectID `json:"id" bson:"_id"`
+
+	PushToken         string   `json:"push_token" bson:"push_token"`
+	Threshold         *float64 `json:"threshold" bson:"threshold"`
+	TokenPrice        *float64 `json:"token_price" bson:"token_price"`
+	TxNotification    *string  `json:"tx_notification" bson:"tx_notification"`
+	PriceNotification *string  `json:"price_notification" bson:"price_notification"`
+
+	Addresses *[]*Address `json:"addresses" bson:"addresses"`
+
+	HistoricalNotifications *[]*HistoryNotification `json:"historical_notifications" bson:"historical_notifications"`
+
+	CreatedAt time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
+}
+
+func NewWatcher(pushToken string) (*Watcher, error) {
 	if pushToken == "" {
 		return nil, errors.New("invalid push token")
 	}
-	if threshold == nil {
-		return nil, errors.New("invalid threshold")
-	}
 
 	return &Watcher{
-		ID:        primitive.NewObjectID(),
-		Address:   address,
-		PushToken: pushToken,
+		ID: primitive.NewObjectID(),
 
-		LastTx:    nil,
-		Threshold: threshold,
+		PushToken:         pushToken,
+		Threshold:         nil,
+		TokenPrice:        nil,
+		TxNotification:    nil,
+		PriceNotification: nil,
+
+		Addresses:               nil,
+		HistoricalNotifications: nil,
 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}, nil
 }
 
-func (w *Watcher) SetAddress(address string) {
-	w.Address = address
+func (w *Watcher) AddAddress(address string) {
+	if w.Addresses == nil {
+		w.Addresses = &[]*Address{{
+			Address: address,
+		}}
+	} else {
+		*w.Addresses = append((*w.Addresses), &Address{Address: address, LastTx: nil})
+	}
 	w.UpdatedAt = time.Now()
 }
 
-func (w *Watcher) SetPushToken(pushToken string) {
-	w.PushToken = pushToken
+func (w *Watcher) DeleteAddress(address string) {
+	if w.Addresses != nil {
+		for i, v := range *w.Addresses {
+			if v.Address == address {
+				*w.Addresses = append((*w.Addresses)[:i], (*w.Addresses)[i+1:]...)
+				w.UpdatedAt = time.Now()
+				break
+			}
+		}
+	}
+}
+
+func (w *Watcher) SetLastTx(address string, tx string) {
+	for _, v := range *w.Addresses {
+		if v.Address == address {
+			v.LastTx = &tx
+		}
+	}
+
 	w.UpdatedAt = time.Now()
 }
 
-func (w *Watcher) SetLastTx(tx string) {
-	w.LastTx = &tx
-	w.UpdatedAt = time.Now()
-}
-
-func (w *Watcher) SetThreshold(threshold int) {
+func (w *Watcher) SetThreshold(threshold float64) {
 	w.Threshold = &threshold
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetTokenPrice(price float64) {
+	w.TokenPrice = &price
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) AddNotification(title, body string, sent bool, timestamp time.Time) {
+	if w.HistoricalNotifications == nil {
+		w.HistoricalNotifications = &[]*HistoryNotification{{
+			Title:     title,
+			Body:      body,
+			Sent:      sent,
+			Timestamp: timestamp,
+		}}
+	} else {
+		*w.HistoricalNotifications = append((*w.HistoricalNotifications), &HistoryNotification{
+			Title: title, Body: body, Sent: sent, Timestamp: timestamp,
+		})
+	}
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetTxNotification(v string) {
+	w.TxNotification = &v
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetPriceNotification(v string) {
+	w.PriceNotification = &v
 	w.UpdatedAt = time.Now()
 }

@@ -26,6 +26,8 @@ services:
     environment:
       - PORT=${PORT}
       - APP_ENV=${APP_ENV}
+      - EXPLORER_API=${EXPLORER_API}
+      - TOKEN_PRICE_URL=${TOKEN_PRICE_URL}
       - MONGO_DB_NAME=${MONGO_DB_NAME}
       - MONGO_DB_URL=mongodb://airdao-mobile-mongodb:${MONGO_DB_PORT}/${MONGO_DB_NAME}
       - FIREBASE_CRED_PATH=${FIREBASE_CRED_PATH}
