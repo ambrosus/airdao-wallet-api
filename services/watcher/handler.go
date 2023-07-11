@@ -28,6 +28,8 @@ func (h *Handler) SetupRoutes(router fiber.Router) {
 
 	router.Delete("/watcher", h.DeleteWatcherHandler)
 	router.Delete("/watcher-addresses", h.DeleteWatcherAddressesHandler)
+
+	router.Post("/watcher/callback", h.WatcherCallbackHandler)
 }
 
 func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
@@ -151,6 +153,32 @@ func (h *Handler) DeleteWatcherAddressesHandler(c *fiber.Ctx) error {
 
 	if err := h.service.DeleteWatcherAddresses(c.Context(), reqBody.PushToken, reqBody.Addresses); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"status": "OK"})
+}
+
+type WatcherCallbackItem struct {
+	Address string `json:"address" validate:"required"`
+	TxHash  string `json:"tx" validate:"required"`
+}
+
+func (h *Handler) WatcherCallbackHandler(c *fiber.Ctx) error {
+	var reqBody []WatcherCallbackItem
+
+	if err := c.BodyParser(&reqBody); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	if err := Validate(reqBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	ctx := c.Context()
+	for _, item := range reqBody {
+		h.service.TransactionWatch(ctx, item.Address, item.TxHash)
 	}
 
 	return c.JSON(fiber.Map{"status": "OK"})

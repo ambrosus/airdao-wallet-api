@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -28,7 +29,7 @@ const (
 type Service interface {
 	Init(ctx context.Context) error
 
-	TransactionWatch(ctx context.Context, watcherId string, stopChan chan struct{})
+	TransactionWatch(ctx context.Context, address string, txHash string)
 	ApiPriceWatch(ctx context.Context)
 	PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 	CGWatch(ctx context.Context)
@@ -41,6 +42,10 @@ type Service interface {
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
 }
 
+type watchers struct {
+	watchers    map[string]*Watcher
+}
+
 type service struct {
 	repository        Repository
 	cloudMessagingSvc cloudmessaging.Service
@@ -48,12 +53,15 @@ type service struct {
 
 	explorerUrl   string
 	tokenPriceUrl string
+	callbackUrl   string
+	explorerToken string
 
-	mx            sync.RWMutex
-	cachedWatcher map[string]*Watcher
-	cachedChan    map[string]chan struct{}
-	cachedPrice   float64
-	cachedCgPrice [][]float64
+	mx                     sync.RWMutex
+	cachedWatcher          map[string]*Watcher
+	cachedWatcherByAddress map[string]*watchers
+	cachedChan             map[string]chan struct{}
+	cachedPrice            float64
+	cachedCgPrice          [][]float64
 }
 
 func NewService(
@@ -61,7 +69,10 @@ func NewService(
 	cloudMessagingSvc cloudmessaging.Service,
 	logger *zap.SugaredLogger,
 	explorerUrl string,
-	tokenPriceUrl string) (Service, error) {
+	tokenPriceUrl string,
+	callbackUrl string,
+	explorerToken string,
+) (Service, error) {
 	if repository == nil {
 		return nil, errors.New("[watcher_service] invalid repository")
 	}
@@ -85,22 +96,42 @@ func NewService(
 
 		explorerUrl:   explorerUrl,
 		tokenPriceUrl: tokenPriceUrl,
+		callbackUrl: callbackUrl,
+		explorerToken: explorerToken,
 
-		cachedChan:    make(map[string]chan struct{}),
-		cachedWatcher: make(map[string]*Watcher),
-		cachedPrice:   0,
-		cachedCgPrice: [][]float64{},
+		cachedChan:             make(map[string]chan struct{}),
+		cachedWatcher:          make(map[string]*Watcher),
+		cachedWatcherByAddress: make(map[string]*watchers),
+		cachedPrice:            0,
+		cachedCgPrice:          [][]float64{},
 	}, nil
+}
+
+func (self *watchers) Add(watcher *Watcher) {
+	if self.watchers == nil {
+		self.watchers = make(map[string]*Watcher)
+	}
+	self.watchers[watcher.ID.Hex()] = watcher
 }
 
 func (s *service) Init(ctx context.Context) error {
 	var priceData *PriceData
-	if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
+	if err := s.doRequest(s.tokenPriceUrl, nil, &priceData); err != nil {
 		return err
 	}
 
 	if priceData != nil {
 		s.cachedPrice = priceData.Data.PriceUSD
+	}
+
+	var req bytes.Buffer
+	req.WriteString("{\"id\":\"")
+	req.WriteString(s.explorerToken)
+	req.WriteString("\",\"action\":\"init\",\"url\":\"")
+	req.WriteString(s.callbackUrl)
+	req.WriteString("\"}")
+	if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+		s.logger.Errorln(err)
 	}
 
 	page := 1
@@ -119,7 +150,7 @@ func (s *service) Init(ctx context.Context) error {
 			s.cachedWatcher[watcher.ID.Hex()] = watcher
 			s.mx.Unlock()
 
-			s.sentUpStopChanAndStartWatchers(ctx, watcher)
+			s.setUpStopChanAndStartWatchers(ctx, watcher)
 		}
 
 		page++
@@ -134,7 +165,7 @@ func (s *service) Init(ctx context.Context) error {
 func (s *service) CGWatch(ctx context.Context) {
 	for {
 		var cgData *CGData
-		if err := s.doRequest("https://api.coingecko.com/api/v3/coins/amber/market_chart?vs_currency=usd&days=30", &cgData); err != nil {
+		if err := s.doRequest("https://api.coingecko.com/api/v3/coins/amber/market_chart?vs_currency=usd&days=30", nil, &cgData); err != nil {
 			s.logger.Errorln(err)
 		}
 
@@ -147,7 +178,7 @@ func (s *service) CGWatch(ctx context.Context) {
 func (s *service) ApiPriceWatch(ctx context.Context) {
 	for {
 		var priceData *PriceData
-		if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
+		if err := s.doRequest(s.tokenPriceUrl, nil, &priceData); err != nil {
 			s.logger.Errorln(err)
 		}
 
@@ -250,92 +281,60 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 	}
 }
 
-func (s *service) TransactionWatch(ctx context.Context, watcherId string, stopChan chan struct{}) {
-	for {
-		select {
-		case <-stopChan:
-			// fmt.Println("Stopping transaction goroutine...")
-			return
-		default:
-			s.mx.RLock()
-			watcher, ok := s.cachedWatcher[watcherId]
-			s.mx.RUnlock()
-			if !ok {
-				continue
+func (s *service) TransactionWatch(ctx context.Context, address string, txHash string) {
+	s.mx.RLock()
+	watchers, ok := s.cachedWatcherByAddress[address]
+	s.mx.RUnlock()
+	if !ok {
+		return
+	}
+
+	for _, watcher := range watchers.watchers {
+		if watcher != nil && *watcher.TxNotification == ON && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
+			var apiTxData *ApiTxData
+
+			if err := s.doRequest(fmt.Sprintf("%s/transactions/%s", s.explorerUrl, txHash), nil, &apiTxData); err != nil {
+				s.logger.Errorln(err)
 			}
 
-			if watcher != nil && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
-				for _, address := range *watcher.Addresses {
-					var apiAddressData *ApiAddressData
-
-					if err := s.doRequest(fmt.Sprintf("%s/addresses/%s/all", s.explorerUrl, address.Address), &apiAddressData); err != nil {
-						s.logger.Errorln(err)
-					}
-
-					if apiAddressData != nil && len(apiAddressData.Data) > 0 {
-
-						missedTxs := []Tx{}
-
-						for i := range apiAddressData.Data {
-							if address.LastTx == nil || (*address.LastTx != apiAddressData.Data[i].Hash && (i+1) < len(apiAddressData.Data) && *address.LastTx == apiAddressData.Data[i+1].Hash) {
-								missedTxs = append(missedTxs, apiAddressData.Data[i])
-
-								decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
-								if err != nil {
-									s.logger.Errorln(err)
-								}
-
-								for i := len(missedTxs) - 1; i >= 0; i-- {
-									if (len(missedTxs[i].From) == 0 || missedTxs[i].From == "") || (len(missedTxs[i].To) == 0 || missedTxs[i].To == "") {
-										continue
-									}
-
-									if *watcher.TxNotification == ON {
-										cutFromAddress := fmt.Sprintf("%s...%s", missedTxs[i].From[:5], missedTxs[i].From[len(missedTxs[i].From)-5:])
-										cutToAddress := fmt.Sprintf("%s...%s", missedTxs[i].To[:5], missedTxs[i].To[len(missedTxs[i].From)-5:])
-
-										data := map[string]interface{}{"type": "transaction-alert", "timestamp": missedTxs[i].Timestamp, "from": cutFromAddress, "to": cutToAddress}
-
-										title := "AMB-Net Tx Alert"
-										roundedAmount := strconv.FormatFloat(missedTxs[i].Value.Ether, 'f', 2, 64)
-
-										body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
-										sent := false
-
-										response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-										if err != nil {
-											s.logger.Errorln(err)
-										}
-
-										if response != nil {
-											sent = true
-										}
-
-										watcher.AddNotification(title, body, sent, time.Now())
-									}
-
-									watcher.SetLastTx(address.Address, missedTxs[i].Hash)
-
-									if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
-										s.logger.Errorln(err)
-									}
-
-									s.mx.Lock()
-									s.cachedWatcher[watcherId] = watcher
-									s.mx.Unlock()
-								}
-
-								break
-							}
-
-							missedTxs = append(missedTxs, apiAddressData.Data[i])
-
-						}
-					}
+			if apiTxData != nil {
+				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
+				if err != nil {
+					s.logger.Errorln(err)
 				}
+
+				if (len(apiTxData.Tx.From) == 0 || apiTxData.Tx.From == "") || (len(apiTxData.Tx.To) == 0 || apiTxData.Tx.To == "") {
+					return
+				}
+
+				cutFromAddress := fmt.Sprintf("%s...%s", apiTxData.Tx.From[:5], apiTxData.Tx.From[len(apiTxData.Tx.From)-5:])
+				cutToAddress := fmt.Sprintf("%s...%s", apiTxData.Tx.To[:5], apiTxData.Tx.To[len(apiTxData.Tx.From)-5:])
+
+				data := map[string]interface{}{"type": "transaction-alert", "timestamp": apiTxData.Tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
+
+				title := "AMB-Net Tx Alert"
+				roundedAmount := strconv.FormatFloat(apiTxData.Tx.Value.Ether, 'f', 2, 64)
+
+				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
+				sent := false
+
+				response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+				if err != nil {
+					s.logger.Errorln(err)
+				}
+
+				if response != nil {
+					sent = true
+				}
+
+				watcher.AddNotification(title, body, sent, time.Now())
 			}
 
-			time.Sleep(10 * time.Second)
+			watcher.SetLastTx(address, txHash)
+
+			if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+				s.logger.Errorln(err)
+			}
 		}
 	}
 }
@@ -381,7 +380,7 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	watcher.SetPriceNotification(ON)
 
 	var priceData *PriceData
-	if err := s.doRequest(s.tokenPriceUrl, &priceData); err != nil {
+	if err := s.doRequest(s.tokenPriceUrl, nil, &priceData); err != nil {
 		return err
 	}
 
@@ -393,9 +392,11 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return err
 	}
 
+	s.mx.Lock()
 	s.cachedWatcher[watcher.ID.Hex()] = watcher
+	s.mx.Unlock()
 
-	s.sentUpStopChanAndStartWatchers(ctx, watcher)
+	s.setUpStopChanAndStartWatchers(ctx, watcher)
 
 	return nil
 }
@@ -413,8 +414,11 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 	}
 
 	if addresses != nil && len(*addresses) > 0 {
-		for _, address := range *addresses {
-
+		var req bytes.Buffer
+		req.WriteString("{\"id\":\"")
+		req.WriteString(s.explorerToken)
+		req.WriteString("\",\"action\":\"subscribe\",\"addresses\":[")
+		for i, address := range *addresses {
 			if watcher.Addresses != nil {
 				for _, v := range *watcher.Addresses {
 					if address == v.Address {
@@ -423,16 +427,22 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 				}
 			}
 
+			if i != 0 {
+				req.WriteString(",\"")
+			} else {
+				req.WriteString("\"")
+			}
+			req.WriteString(address)
+			req.WriteString("\"")
+
 			watcher.AddAddress(address)
-
-			var apiAddressData *ApiAddressData
-			if err := s.doRequest(fmt.Sprintf("%s/addresses/%s/all", s.explorerUrl, address), &apiAddressData); err != nil {
-				s.logger.Errorln(err)
-			}
-
-			if apiAddressData != nil && len(apiAddressData.Data) > 0 {
-				watcher.SetLastTx(address, apiAddressData.Data[0].Hash)
-			}
+			s.mx.Lock()
+			s.cachedWatcherByAddress[address].Add(watcher)
+			s.mx.Unlock()
+		}
+		req.WriteString("]}")
+		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+			s.logger.Errorln(err)
 		}
 	}
 
@@ -485,6 +495,26 @@ func (s *service) DeleteWatcher(ctx context.Context, pushToken string) error {
 	delete(s.cachedWatcher, watcher.ID.Hex())
 	delete(s.cachedChan, watcher.ID.Hex())
 
+	if watcher.Addresses != nil && len(*watcher.Addresses) > 0 {
+		var req bytes.Buffer
+		req.WriteString("{\"id\":\"")
+		req.WriteString(s.explorerToken)
+		req.WriteString("\",\"action\":\"unsubscribe\",\"addresses\":[")
+		for i, address := range *watcher.Addresses {
+			if i != 0 {
+				req.WriteString(",\"")
+			} else {
+				req.WriteString("\"")
+			}
+			req.WriteString(address.Address)
+			req.WriteString("\"")
+		}
+		req.WriteString("]}")
+		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+			s.logger.Errorln(err)
+		}
+	}
+
 	return nil
 }
 
@@ -502,8 +532,23 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 		return errors.New("watcher not found")
 	}
 
-	for _, address := range addresses {
+	var req bytes.Buffer
+	req.WriteString("{\"id\":\"")
+	req.WriteString(s.explorerToken)
+	req.WriteString("\",\"action\":\"unsubscribe\",\"addresses\":[")
+	for i, address := range addresses {
 		watcher.DeleteAddress(address)
+		if i != 0 {
+			req.WriteString(",\"")
+		} else {
+			req.WriteString("\"")
+		}
+		req.WriteString(address)
+		req.WriteString("\"")
+	}
+	req.WriteString("]}")
+	if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+		s.logger.Errorln(err)
 	}
 
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
@@ -517,20 +562,57 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 	return nil
 }
 
-func (s *service) sentUpStopChanAndStartWatchers(ctx context.Context, watcher *Watcher) {
+func (s *service) setUpStopChanAndStartWatchers(ctx context.Context, watcher *Watcher) {
 	s.mx.Lock()
 	stopChan := make(chan struct{})
 	s.cachedChan[watcher.ID.Hex()] = stopChan
 	s.mx.Unlock()
 
-	go s.TransactionWatch(ctx, watcher.ID.Hex(), stopChan)
+	if watcher.Addresses != nil && len(*watcher.Addresses) > 0 {
+		var req bytes.Buffer
+		req.WriteString("{\"id\":\"")
+		req.WriteString(s.explorerToken)
+		req.WriteString("\",\"action\":\"subscribe\",\"addresses\":[")
+		for i, address := range *watcher.Addresses {
+			if i != 0 {
+				req.WriteString(",\"")
+			} else {
+				req.WriteString("\"")
+			}
+			req.WriteString(address.Address)
+			req.WriteString("\"")
+
+			var items *watchers
+			var ok bool
+			s.mx.Lock()
+			items, ok = s.cachedWatcherByAddress[address.Address]
+			if !ok || items == nil {
+				items = new(watchers)
+				s.cachedWatcherByAddress[address.Address] = items
+			}
+			items.Add(watcher)
+			s.mx.Unlock()
+		}
+		req.WriteString("]}")
+		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+			s.logger.Errorln(err)
+		}
+	}
+
 	go s.PriceWatch(ctx, watcher.ID.Hex(), stopChan)
 }
 
-func (s *service) doRequest(url string, res interface{}) error {
+func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 	client := &http.Client{}
+	var method string
 
-	req, err := http.NewRequest("GET", url, nil)
+	if body != nil {
+		method = "POST"
+	} else {
+		method = "GET"
+	}
+
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return err
 	}
