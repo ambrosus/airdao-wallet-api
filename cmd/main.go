@@ -80,7 +80,7 @@ func main() {
 	}
 
 	// Services
-	watcherService, err := watcher.NewService(watcherRepository, cloudMessagingService, zapLogger, cfg.ExplorerApi, cfg.TokenPriceUrl)
+	watcherService, err := watcher.NewService(watcherRepository, cloudMessagingService, zapLogger, cfg.ExplorerApi, cfg.TokenPriceUrl, cfg.CallbackUrl, cfg.ExplorerToken)
 	if err != nil {
 		zapLogger.Fatalf("failed to create watcher service - %v", err)
 	}

@@ -24,6 +24,10 @@ type ApiAddressData struct {
 	Account Account `json:"account"`
 }
 
+type ApiTxData struct {
+	Tx      Tx    `json:"data"`
+}
+
 type PriceData struct {
 	Data struct {
 		PriceUSD float64 `json:"price_usd"`
