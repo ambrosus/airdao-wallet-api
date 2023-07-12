@@ -299,23 +299,24 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				s.logger.Errorln(err)
 			}
 
-			if apiTxData != nil {
+			if apiTxData != nil && len(apiTxData.Data) == 1 {
+				tx := &apiTxData.Data[0]
 				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
 				if err != nil {
 					s.logger.Errorln(err)
 				}
 
-				if (len(apiTxData.Tx.From) == 0 || apiTxData.Tx.From == "") || (len(apiTxData.Tx.To) == 0 || apiTxData.Tx.To == "") {
+				if (len(tx.From) == 0 || tx.From == "") || (len(tx.To) == 0 || tx.To == "") {
 					return
 				}
 
-				cutFromAddress := fmt.Sprintf("%s...%s", apiTxData.Tx.From[:5], apiTxData.Tx.From[len(apiTxData.Tx.From)-5:])
-				cutToAddress := fmt.Sprintf("%s...%s", apiTxData.Tx.To[:5], apiTxData.Tx.To[len(apiTxData.Tx.From)-5:])
+				cutFromAddress := fmt.Sprintf("%s...%s", tx.From[:5], tx.From[len(tx.From)-5:])
+				cutToAddress := fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.From)-5:])
 
-				data := map[string]interface{}{"type": "transaction-alert", "timestamp": apiTxData.Tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
+				data := map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
 
 				title := "AMB-Net Tx Alert"
-				roundedAmount := strconv.FormatFloat(apiTxData.Tx.Value.Ether, 'f', 2, 64)
+				roundedAmount := strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
 
 				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
 				sent := false

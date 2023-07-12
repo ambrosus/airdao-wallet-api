@@ -25,7 +25,7 @@ type ApiAddressData struct {
 }
 
 type ApiTxData struct {
-	Tx      Tx    `json:"data"`
+	Data    []Tx    `json:"data"`
 }
 
 type PriceData struct {
