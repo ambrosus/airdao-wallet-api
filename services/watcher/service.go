@@ -621,6 +621,14 @@ func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 		return err
 	}
 
+	if body != nil {
+		if reader, err := req.GetBody(); err == nil {
+			if reqBody, err := io.ReadAll(reader); err == nil {
+				fmt.Printf("Body: %v\n", string(reqBody))
+			}
+		}
+	}
+
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 
