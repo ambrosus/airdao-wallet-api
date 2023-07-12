@@ -29,7 +29,7 @@ func (h *Handler) SetupRoutes(router fiber.Router) {
 	router.Delete("/watcher", h.DeleteWatcherHandler)
 	router.Delete("/watcher-addresses", h.DeleteWatcherAddressesHandler)
 
-	router.Post("/watcher/callback", h.WatcherCallbackHandler)
+	router.Post("/explorer-callback", h.WatcherCallbackHandler)
 }
 
 func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
