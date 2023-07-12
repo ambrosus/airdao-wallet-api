@@ -34,6 +34,8 @@ type Service interface {
 	PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 	CGWatch(ctx context.Context)
 
+	GetExplorerId() string
+
 	GetWatcher(ctx context.Context, pushToken string) (*Watcher, error)
 	GetWatcherHistoryPrices(ctx context.Context) *CGData
 	CreateWatcher(ctx context.Context, pushToken string) error
@@ -641,4 +643,8 @@ func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 	}
 
 	return nil
+}
+
+func (self *service) GetExplorerId() string {
+    return self.explorerToken
 }

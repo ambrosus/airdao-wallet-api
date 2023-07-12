@@ -160,11 +160,16 @@ func (h *Handler) DeleteWatcherAddressesHandler(c *fiber.Ctx) error {
 
 type WatcherCallbackItem struct {
 	Address string `json:"address" validate:"required"`
-	TxHash  string `json:"tx" validate:"required"`
+	TxHash  string `json:"txHash" validate:"required"`
+}
+
+type WatcherCallback struct {
+	Id     string `json:"id" validate:"required"`
+	Items  []WatcherCallbackItem `json:"items" validate:"required"`
 }
 
 func (h *Handler) WatcherCallbackHandler(c *fiber.Ctx) error {
-	var reqBody []WatcherCallbackItem
+	var reqBody WatcherCallback
 
 	if err := c.BodyParser(&reqBody); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -176,8 +181,12 @@ func (h *Handler) WatcherCallbackHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	if reqBody.Id != h.service.GetExplorerId() {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Wrong Explorer API ID"})
+	}
+
 	ctx := c.Context()
-	for _, item := range reqBody {
+	for _, item := range reqBody.Items {
 		h.service.TransactionWatch(ctx, item.Address, item.TxHash)
 	}
 
