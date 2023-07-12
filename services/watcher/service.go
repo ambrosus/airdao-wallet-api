@@ -614,6 +614,8 @@ func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 		method = "GET"
 	}
 
+	fmt.Printf("Request %v %v\n", method, url)
+
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return err
@@ -638,8 +640,12 @@ func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 		return err
 	}
 
-	if err := json.Unmarshal(respBody, res); err != nil {
-		return err
+	fmt.Printf("Response: %v\n", string(respBody))
+
+	if res != nil {
+		if err := json.Unmarshal(respBody, res); err != nil {
+			return err
+		}
 	}
 
 	return nil
