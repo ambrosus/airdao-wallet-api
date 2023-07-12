@@ -185,9 +185,10 @@ func (h *Handler) WatcherCallbackHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Wrong Explorer API ID"})
 	}
 
+	cache := make(map[string]bool)
 	ctx := c.Context()
 	for _, item := range reqBody.Items {
-		h.service.TransactionWatch(ctx, item.Address, item.TxHash)
+		h.service.TransactionWatch(ctx, item.Address, item.TxHash, cache)
 	}
 
 	return c.JSON(fiber.Map{"status": "OK"})

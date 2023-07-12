@@ -29,7 +29,7 @@ const (
 type Service interface {
 	Init(ctx context.Context) error
 
-	TransactionWatch(ctx context.Context, address string, txHash string)
+	TransactionWatch(ctx context.Context, address string, txHash string, cache map[string]bool)
 	ApiPriceWatch(ctx context.Context)
 	PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{})
 	CGWatch(ctx context.Context)
@@ -283,7 +283,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 	}
 }
 
-func (s *service) TransactionWatch(ctx context.Context, address string, txHash string) {
+func (s *service) TransactionWatch(ctx context.Context, address string, txHash string, cache map[string]bool) {
 	s.mx.RLock()
 	watchers, ok := s.cachedWatcherByAddress[address]
 	s.mx.RUnlock()
@@ -293,44 +293,49 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 
 	for _, watcher := range watchers.watchers {
 		if watcher != nil && *watcher.TxNotification == ON && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
-			var apiTxData *ApiTxData
+			itemId := txHash + watcher.ID.Hex()
+			if _, ok := cache[itemId]; !ok {
+				var apiTxData *ApiTxData
 
-			if err := s.doRequest(fmt.Sprintf("%s/transactions/%s", s.explorerUrl, txHash), nil, &apiTxData); err != nil {
-				s.logger.Errorln(err)
-			}
-
-			if apiTxData != nil && len(apiTxData.Data) == 1 {
-				tx := &apiTxData.Data[0]
-				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
-				if err != nil {
+				if err := s.doRequest(fmt.Sprintf("%s/transactions/%s", s.explorerUrl, txHash), nil, &apiTxData); err != nil {
 					s.logger.Errorln(err)
 				}
 
-				if (len(tx.From) == 0 || tx.From == "") || (len(tx.To) == 0 || tx.To == "") {
-					return
+				if apiTxData != nil && len(apiTxData.Data) == 1 {
+					tx := &apiTxData.Data[0]
+					decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
+					if err != nil {
+						s.logger.Errorln(err)
+					}
+
+					if (len(tx.From) == 0 || tx.From == "") || (len(tx.To) == 0 || tx.To == "") {
+						return
+					}
+
+					cutFromAddress := fmt.Sprintf("%s...%s", tx.From[:5], tx.From[len(tx.From)-5:])
+					cutToAddress := fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.From)-5:])
+
+					data := map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
+
+					title := "AMB-Net Tx Alert"
+					roundedAmount := strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
+
+					body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
+					sent := false
+
+					response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+					if err != nil {
+						s.logger.Errorln(err)
+					}
+
+					if response != nil {
+						sent = true
+					}
+
+					watcher.AddNotification(title, body, sent, time.Now())
+
+					cache[itemId] = true
 				}
-
-				cutFromAddress := fmt.Sprintf("%s...%s", tx.From[:5], tx.From[len(tx.From)-5:])
-				cutToAddress := fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.From)-5:])
-
-				data := map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
-
-				title := "AMB-Net Tx Alert"
-				roundedAmount := strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
-
-				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
-				sent := false
-
-				response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-				if err != nil {
-					s.logger.Errorln(err)
-				}
-
-				if response != nil {
-					sent = true
-				}
-
-				watcher.AddNotification(title, body, sent, time.Now())
 			}
 
 			watcher.SetLastTx(address, txHash)
