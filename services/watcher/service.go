@@ -314,6 +314,9 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 						return
 					}
 					tx := &apiTxData.Data[0]
+					if tx.Value.Ether == 0 {
+						return
+					}
 					if len(tx.From) > 0 && tx.From != "" {
 						cutFromAddress = fmt.Sprintf("%s...%s", tx.From[:5], tx.From[len(tx.From)-5:])
 					}
