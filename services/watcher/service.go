@@ -291,52 +291,61 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 		return
 	}
 
+	var cutFromAddress string
+	var cutToAddress string
+	var roundedAmount string
+	var data map[string]interface{}
+	takeTx := true
+
 	for _, watcher := range watchers.watchers {
 		if watcher != nil && *watcher.TxNotification == ON && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
 			itemId := txHash + watcher.ID.Hex()
 			if _, ok := cache[itemId]; !ok {
-				var apiTxData *ApiTxData
-
-				if err := s.doRequest(fmt.Sprintf("%s/transactions/%s", s.explorerUrl, txHash), nil, &apiTxData); err != nil {
-					s.logger.Errorf("TransactionWatch doRequest error %v\n", err)
-				}
-
-				if apiTxData != nil && len(apiTxData.Data) == 1 {
-					tx := &apiTxData.Data[0]
-					decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
-					if err != nil {
-						s.logger.Errorf("TransactionWatch base64.StdEncoding.DecodeString error %v\n", err)
-					}
-
-					if (len(tx.From) == 0 || tx.From == "") || (len(tx.To) == 0 || tx.To == "") {
+				if takeTx {
+					takeTx = false
+					var apiTxData *ApiTxData
+					if err := s.doRequest(fmt.Sprintf("%s/transactions/%s", s.explorerUrl, txHash), nil, &apiTxData); err != nil {
+						s.logger.Errorf("TransactionWatch doRequest error %v\n", err)
 						return
 					}
-
-					cutFromAddress := fmt.Sprintf("%s...%s", tx.From[:5], tx.From[len(tx.From)-5:])
-					cutToAddress := fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.From)-5:])
-
-					data := map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
-
-					title := "AMB-Net Tx Alert"
-					roundedAmount := strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
-
-					body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
-					sent := false
-
-					response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
-					if err != nil {
-						s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
+					if apiTxData == nil || len(apiTxData.Data) == 0 {
+						s.logger.Errorln("TransactionWatch empty tx response")
+						return
 					}
-
-					if response != nil {
-						sent = true
+					tx := &apiTxData.Data[0]
+					if len(tx.From) > 0 && tx.From != "" {
+						cutFromAddress = fmt.Sprintf("%s...%s", tx.From[:5], tx.From[len(tx.From)-5:])
 					}
-
-					watcher.AddNotification(title, body, sent, time.Now())
-
-					fmt.Printf("Tx notify: %v:%v\n", txHash, watcher.ID.Hex())
-					cache[itemId] = true
+					if len(tx.To) > 0 && tx.To != "" {
+						cutToAddress = fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.From)-5:])
+					}
+					roundedAmount = strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
+					data = map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
 				}
+
+				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
+				if err != nil {
+					s.logger.Errorf("TransactionWatch base64.StdEncoding.DecodeString error %v\n", err)
+					continue
+				}
+
+				title := "AMB-Net Tx Alert"
+				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
+				sent := false
+
+				response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
+				if err != nil {
+					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
+				}
+
+				if response != nil {
+					sent = true
+				}
+
+				watcher.AddNotification(title, body, sent, time.Now())
+
+				fmt.Printf("Tx notify: %v:%v\n", txHash, watcher.ID.Hex())
+				cache[itemId] = true
 			}
 
 			watcher.SetLastTx(address, txHash)
