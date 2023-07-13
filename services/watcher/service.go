@@ -320,7 +320,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 						cutToAddress = fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.To)-5:])
 					}
 					roundedAmount = strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
-					data = map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
+					data = map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "sender": cutFromAddress, "to": cutToAddress}
 				}
 
 				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
