@@ -317,7 +317,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 						cutFromAddress = fmt.Sprintf("%s...%s", tx.From[:5], tx.From[len(tx.From)-5:])
 					}
 					if len(tx.To) > 0 && tx.To != "" {
-						cutToAddress = fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.From)-5:])
+						cutToAddress = fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.To)-5:])
 					}
 					roundedAmount = strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
 					data = map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "from": cutFromAddress, "to": cutToAddress}
