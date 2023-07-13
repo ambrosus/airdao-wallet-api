@@ -213,7 +213,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 
 				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
 				if err != nil {
-					s.logger.Errorln(err)
+					s.logger.Errorf("PriceWatch base64.StdEncoding.DecodeString error %v\n", err)
 				}
 
 				if percentage >= float64(*watcher.Threshold) {
@@ -225,7 +225,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
-							s.logger.Errorln(err)
+							s.logger.Errorf("PriceWatch (Up) cloudMessagingSvc.SendMessage error %v\n", err)
 						}
 
 						if response != nil {
@@ -238,7 +238,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					watcher.SetTokenPrice(s.cachedPrice)
 
 					if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
-						s.logger.Errorln(err)
+						s.logger.Errorf("PriceWatch (Up) repository.UpdateWatcher error %v\n", err)
 					}
 
 					s.mx.Lock()
@@ -255,7 +255,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
-							s.logger.Errorln(err)
+							s.logger.Errorf("PriceWatch (Down) cloudMessagingSvc.SendMessage error %v\n", err)
 						}
 
 						if response != nil {
@@ -268,7 +268,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					watcher.SetTokenPrice(s.cachedPrice)
 
 					if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
-						s.logger.Errorln(err)
+						s.logger.Errorf("PriceWatch (Down) repository.UpdateWatcher error %v\n", err)
 					}
 
 					s.mx.Lock()
@@ -298,14 +298,14 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				var apiTxData *ApiTxData
 
 				if err := s.doRequest(fmt.Sprintf("%s/transactions/%s", s.explorerUrl, txHash), nil, &apiTxData); err != nil {
-					s.logger.Errorln(err)
+					s.logger.Errorf("TransactionWatch doRequest error %v\n", err)
 				}
 
 				if apiTxData != nil && len(apiTxData.Data) == 1 {
 					tx := &apiTxData.Data[0]
 					decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
 					if err != nil {
-						s.logger.Errorln(err)
+						s.logger.Errorf("TransactionWatch base64.StdEncoding.DecodeString error %v\n", err)
 					}
 
 					if (len(tx.From) == 0 || tx.From == "") || (len(tx.To) == 0 || tx.To == "") {
@@ -325,7 +325,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 
 					response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 					if err != nil {
-						s.logger.Errorln(err)
+						s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
 					}
 
 					if response != nil {
@@ -334,6 +334,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 
 					watcher.AddNotification(title, body, sent, time.Now())
 
+					fmt.Printf("Tx notify: %v:%v\n", txHash, watcher.ID.Hex())
 					cache[itemId] = true
 				}
 			}
@@ -341,7 +342,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 			watcher.SetLastTx(address, txHash)
 
 			if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
-				s.logger.Errorln(err)
+				s.logger.Errorf("TransactionWatch repository.UpdateWatcher error %v\n", err)
 			}
 		}
 	}
