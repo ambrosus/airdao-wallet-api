@@ -294,6 +294,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 	var cutFromAddress string
 	var cutToAddress string
 	var roundedAmount string
+	var tokenSymbol string
 	var data map[string]interface{}
 	takeTx := true
 
@@ -320,6 +321,11 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 						cutToAddress = fmt.Sprintf("%s...%s", tx.To[:5], tx.To[len(tx.To)-5:])
 					}
 					roundedAmount = strconv.FormatFloat(tx.Value.Ether, 'f', 2, 64)
+					if tx.Value.Symbol == nil {
+						tokenSymbol = "AMB"
+					} else {
+						tokenSymbol = *tx.Value.Symbol
+					}
 					data = map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "sender": cutFromAddress, "to": cutToAddress}
 				}
 
@@ -330,7 +336,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				}
 
 				title := "AMB-Net Tx Alert"
-				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s", cutFromAddress, cutToAddress, roundedAmount)
+				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s %s", cutFromAddress, cutToAddress, roundedAmount, tokenSymbol)
 				sent := false
 
 				response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)

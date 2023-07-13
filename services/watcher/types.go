@@ -14,6 +14,7 @@ type Tx struct {
 	Hash      string `json:"hash"`
 	Value     struct {
 		Ether float64 `json:"ether"`
+		Symbol *string `json:"symbol,omitempty"`
 	} `json:"value"`
 
 	Timestamp float64 `json:"timestamp"`
