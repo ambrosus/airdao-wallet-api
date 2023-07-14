@@ -160,8 +160,66 @@ func (s *service) Init(ctx context.Context) error {
 
 	go s.CGWatch(ctx)
 	go s.ApiPriceWatch(ctx)
+	go s.keepAlive(ctx)
 
 	return nil
+}
+
+func (s *service) keepAlive(ctx context.Context) {
+	for {
+		var req bytes.Buffer
+		req.WriteString("{\"id\":\"")
+		req.WriteString(s.explorerToken)
+		req.WriteString("\",\"action\":\"init\",\"url\":\"")
+		req.WriteString(s.callbackUrl)
+		req.WriteString("\"}")
+		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+			s.logger.Errorln(err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		page := 1
+		for {
+			watchers, err := s.repository.GetWatcherList(ctx, bson.M{}, page)
+			if err != nil {
+				s.logger.Errorf("keepAlive repository.GetWatcherList error %v", err)
+				break
+			}
+
+			if watchers == nil {
+				break
+			}
+
+			for _, watcher := range watchers {
+				s.mx.Lock()
+				s.cachedWatcher[watcher.ID.Hex()] = watcher
+				s.mx.Unlock()
+
+				s.setUpStopChanAndStartWatchers(ctx, watcher)
+			}
+
+			page++
+		}
+
+		req.Reset()
+		req.WriteString("{\"id\":\"")
+		req.WriteString(s.explorerToken)
+		req.WriteString("\",\"action\":\"check\"}")
+		tries := 6
+		for {
+			if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+				s.logger.Errorln(err)
+				if tries != 0 {
+					tries--
+					time.Sleep(5 * time.Second)
+					continue
+				}
+			}
+			time.Sleep(30 * time.Second)
+			tries = 6
+		}
+	}
 }
 
 func (s *service) CGWatch(ctx context.Context) {
