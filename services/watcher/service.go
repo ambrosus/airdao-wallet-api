@@ -691,7 +691,7 @@ func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil
+		return fmt.Errorf("Not found")
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
