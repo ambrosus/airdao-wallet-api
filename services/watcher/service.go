@@ -170,12 +170,12 @@ func (s *service) keepAlive(ctx context.Context) {
 			page++
 		}
 
-		req.Reset()
-		req.WriteString("{\"id\":\"")
-		req.WriteString(s.explorerToken)
-		req.WriteString("\",\"action\":\"check\"}")
 		tries := 6
 		for {
+			req.Reset()
+			req.WriteString("{\"id\":\"")
+			req.WriteString(s.explorerToken)
+			req.WriteString("\",\"action\":\"check\"}")
 			if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
 				s.logger.Errorln(err)
 				if tries != 0 {
