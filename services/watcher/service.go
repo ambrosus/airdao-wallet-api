@@ -122,6 +122,10 @@ func (self *watchers) Remove(pushToken string) {
 	}
 }
 
+func (self *watchers) IsEmpty() bool {
+    return self.watchers == nil || len(self.watchers) == 0
+}
+
 func (s *service) Init(ctx context.Context) error {
 	var priceData *PriceData
 	if err := s.doRequest(s.tokenPriceUrl, nil, &priceData); err != nil {
@@ -601,26 +605,34 @@ func (s *service) DeleteWatcher(ctx context.Context, pushToken string) error {
 		req.WriteString("{\"id\":\"")
 		req.WriteString(s.explorerToken)
 		req.WriteString("\",\"action\":\"unsubscribe\",\"addresses\":[")
-		for i, address := range *watcher.Addresses {
-			if i != 0 {
-				req.WriteString(",\"")
-			} else {
-				req.WriteString("\"")
-			}
-			req.WriteString(address.Address)
-			req.WriteString("\"")
-		}
-		req.WriteString("]}")
-		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
-			s.logger.Errorln(err)
-		}
-		s.mx.RLock()
+		first := true
+		empty := true
 		for _, address := range *watcher.Addresses {
+			remove := true
+			s.mx.RLock()
 			if watchers, ok := s.cachedWatcherByAddress[address.Address]; ok {
 				watchers.Remove(watcher.PushToken)
+				remove = watchers.IsEmpty()
+			}
+			s.mx.RUnlock()
+			if remove {
+				empty = false
+				if first {
+					first = false
+					req.WriteString("\"")
+				} else {
+					req.WriteString(",\"")
+				}
+				req.WriteString(address.Address)
+				req.WriteString("\"")
 			}
 		}
-		s.mx.RUnlock()
+		if !empty {
+			req.WriteString("]}")
+			if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+				s.logger.Errorln(err)
+			}
+		}
 	}
 
 	return nil
@@ -639,28 +651,35 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 	req.WriteString("{\"id\":\"")
 	req.WriteString(s.explorerToken)
 	req.WriteString("\",\"action\":\"unsubscribe\",\"addresses\":[")
-	for i, address := range addresses {
-		watcher.DeleteAddress(address)
-		if i != 0 {
-			req.WriteString(",\"")
-		} else {
-			req.WriteString("\"")
-		}
-		req.WriteString(address)
-		req.WriteString("\"")
-	}
-	req.WriteString("]}")
-	if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
-		s.logger.Errorln(err)
-	}
-
-	s.mx.RLock()
+	first := true
+	empty := true
 	for _, address := range addresses {
+		remove := true
+		watcher.DeleteAddress(address)
+		s.mx.RLock()
 		if watchers, ok := s.cachedWatcherByAddress[address]; ok {
 			watchers.Remove(watcher.PushToken)
+			remove = watchers.IsEmpty()
+		}
+		s.mx.RUnlock()
+		if remove {
+			empty = false
+			if first {
+				first = false
+				req.WriteString("\"")
+			} else {
+				req.WriteString(",\"")
+			}
+			req.WriteString(address)
+			req.WriteString("\"")
 		}
 	}
-	s.mx.RUnlock()
+	if !empty {
+		req.WriteString("]}")
+		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
+			s.logger.Errorln(err)
+		}
+	}
 
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 		return err
