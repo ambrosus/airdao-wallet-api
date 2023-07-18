@@ -113,7 +113,13 @@ func (self *watchers) Add(watcher *Watcher) {
 	if self.watchers == nil {
 		self.watchers = make(map[string]*Watcher)
 	}
-	self.watchers[watcher.ID.Hex()] = watcher
+	self.watchers[watcher.PushToken] = watcher
+}
+
+func (self *watchers) Remove(pushToken string) {
+	if self.watchers != nil {
+		delete(self.watchers, pushToken)
+	}
 }
 
 func (s *service) Init(ctx context.Context) error {
@@ -164,7 +170,7 @@ func (s *service) keepAlive(ctx context.Context) {
 
 				for _, watcher := range watchers {
 					s.mx.Lock()
-					s.cachedWatcher[watcher.ID.Hex()] = watcher
+					s.cachedWatcher[watcher.PushToken] = watcher
 					s.mx.Unlock()
 
 					s.setUpStopChanAndStartWatchers(ctx, watcher)
@@ -285,6 +291,9 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Up) cloudMessagingSvc.SendMessage error %v\n", err)
+							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								return
+							}
 						}
 
 						if response != nil {
@@ -299,10 +308,6 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 						s.logger.Errorf("PriceWatch (Up) repository.UpdateWatcher error %v\n", err)
 					}
-
-					s.mx.Lock()
-					s.cachedWatcher[watcherId] = watcher
-					s.mx.Unlock()
 				}
 
 				if percentage <= -float64(*watcher.Threshold) {
@@ -315,6 +320,9 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Down) cloudMessagingSvc.SendMessage error %v\n", err)
+							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								return
+							}
 						}
 
 						if response != nil {
@@ -329,10 +337,6 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 					if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 						s.logger.Errorf("PriceWatch (Down) repository.UpdateWatcher error %v\n", err)
 					}
-
-					s.mx.Lock()
-					s.cachedWatcher[watcherId] = watcher
-					s.mx.Unlock()
 				}
 
 			}
@@ -359,7 +363,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 
 	for _, watcher := range watchers.watchers {
 		if watcher != nil && *watcher.TxNotification == ON && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
-			itemId := txHash + watcher.ID.Hex()
+			itemId := txHash + watcher.PushToken
 			if _, ok := cache[itemId]; !ok {
 				if takeTx {
 					takeTx = false
@@ -404,6 +408,11 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
+					if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+						s.mx.RLock()
+						watchers.Remove(watcher.PushToken)
+						s.mx.RUnlock()
+					}
 				}
 
 				if response != nil {
@@ -412,7 +421,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 
 				watcher.AddNotification(title, body, sent, time.Now())
 
-				fmt.Printf("Tx notify: %v:%v\n", txHash, watcher.ID.Hex())
+				fmt.Printf("Tx notify: %v:%v\n", txHash, watcher.PushToken)
 				cache[itemId] = true
 			}
 
@@ -427,6 +436,16 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 
 func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, error) {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
+	var watcher *Watcher
+	var ok bool
+
+	s.mx.Lock()
+	watcher, ok = s.cachedWatcher[encodePushToken]
+	s.mx.Unlock()
+
+	if ok && watcher != nil {
+		return watcher, nil
+	}
 
 	watcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
 	if err != nil {
@@ -436,6 +455,10 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 	if watcher == nil {
 		return nil, errors.New("watcher not found")
 	}
+
+	s.mx.Lock()
+	s.cachedWatcher[encodePushToken] = watcher
+	s.mx.Unlock()
 
 	return watcher, nil
 }
@@ -479,7 +502,7 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	}
 
 	s.mx.Lock()
-	s.cachedWatcher[watcher.ID.Hex()] = watcher
+	s.cachedWatcher[watcher.PushToken] = watcher
 	s.mx.Unlock()
 
 	s.setUpStopChanAndStartWatchers(ctx, watcher)
@@ -488,13 +511,10 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 }
 
 func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error {
-	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
-
-	watcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
+	watcher, err := s.GetWatcher(ctx, pushToken)
 	if err != nil {
 		return err
 	}
-
 	if watcher == nil {
 		return errors.New("watcher not found")
 	}
@@ -548,38 +568,33 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 		return err
 	}
 
-	s.mx.Lock()
-	s.cachedWatcher[watcher.ID.Hex()] = watcher
-	s.mx.Unlock()
-
 	return nil
 }
 
 func (s *service) DeleteWatcher(ctx context.Context, pushToken string) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
 
-	filters := bson.M{"push_token": encodePushToken}
-
-	watcher, err := s.repository.GetWatcher(ctx, filters)
+	watcher, err := s.GetWatcher(ctx, pushToken)
 	if err != nil {
 		return err
 	}
-
 	if watcher == nil {
 		return errors.New("watcher not found")
 	}
 
-	if err := s.repository.DeleteWatcher(ctx, filters); err != nil {
+	if err := s.repository.DeleteWatcher(ctx, bson.M{"push_token": encodePushToken}); err != nil {
 		return err
 	}
 
 	s.mx.RLock()
-	watcherStopChan := s.cachedChan[watcher.ID.Hex()]
+	watcherStopChan := s.cachedChan[watcher.PushToken]
 	s.mx.RUnlock()
 
 	close(watcherStopChan)
-	delete(s.cachedWatcher, watcher.ID.Hex())
-	delete(s.cachedChan, watcher.ID.Hex())
+	s.mx.RLock()
+	delete(s.cachedWatcher, watcher.PushToken)
+	delete(s.cachedChan, watcher.PushToken)
+	s.mx.RUnlock()
 
 	if watcher.Addresses != nil && len(*watcher.Addresses) > 0 {
 		var req bytes.Buffer
@@ -599,21 +614,23 @@ func (s *service) DeleteWatcher(ctx context.Context, pushToken string) error {
 		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
 			s.logger.Errorln(err)
 		}
+		s.mx.RLock()
+		for _, address := range *watcher.Addresses {
+			if watchers, ok := s.cachedWatcherByAddress[address.Address]; ok {
+				watchers.Remove(watcher.PushToken)
+			}
+		}
+		s.mx.RUnlock()
 	}
 
 	return nil
 }
 
 func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error {
-	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
-
-	filters := bson.M{"push_token": encodePushToken}
-
-	watcher, err := s.repository.GetWatcher(ctx, filters)
+	watcher, err := s.GetWatcher(ctx, pushToken)
 	if err != nil {
 		return err
 	}
-
 	if watcher == nil {
 		return errors.New("watcher not found")
 	}
@@ -637,13 +654,17 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 		s.logger.Errorln(err)
 	}
 
+	s.mx.RLock()
+	for _, address := range addresses {
+		if watchers, ok := s.cachedWatcherByAddress[address]; ok {
+			watchers.Remove(watcher.PushToken)
+		}
+	}
+	s.mx.RUnlock()
+
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 		return err
 	}
-
-	s.mx.Lock()
-	s.cachedWatcher[watcher.ID.Hex()] = watcher
-	s.mx.Unlock()
 
 	return nil
 }
@@ -651,7 +672,7 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 func (s *service) setUpStopChanAndStartWatchers(ctx context.Context, watcher *Watcher) {
 	s.mx.Lock()
 	stopChan := make(chan struct{})
-	s.cachedChan[watcher.ID.Hex()] = stopChan
+	s.cachedChan[watcher.PushToken] = stopChan
 	s.mx.Unlock()
 
 	if watcher.Addresses != nil && len(*watcher.Addresses) > 0 {
@@ -685,7 +706,7 @@ func (s *service) setUpStopChanAndStartWatchers(ctx context.Context, watcher *Wa
 		}
 	}
 
-	go s.PriceWatch(ctx, watcher.ID.Hex(), stopChan)
+	go s.PriceWatch(ctx, watcher.PushToken, stopChan)
 }
 
 func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
