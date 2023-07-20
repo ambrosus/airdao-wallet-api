@@ -546,9 +546,7 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 			req.WriteString("\"")
 
 			watcher.AddAddress(address)
-			s.mx.Lock()
-			s.cachedWatcherByAddress[address].Add(watcher)
-			s.mx.Unlock()
+			s.addWatcherForAddress(address, watcher)
 		}
 		req.WriteString("]}")
 		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
@@ -708,16 +706,7 @@ func (s *service) setUpStopChanAndStartWatchers(ctx context.Context, watcher *Wa
 			req.WriteString(address.Address)
 			req.WriteString("\"")
 
-			var items *watchers
-			var ok bool
-			s.mx.Lock()
-			items, ok = s.cachedWatcherByAddress[address.Address]
-			if !ok || items == nil {
-				items = new(watchers)
-				s.cachedWatcherByAddress[address.Address] = items
-			}
-			items.Add(watcher)
-			s.mx.Unlock()
+			s.addWatcherForAddress(address.Address, watcher)
 		}
 		req.WriteString("]}")
 		if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
@@ -726,6 +715,19 @@ func (s *service) setUpStopChanAndStartWatchers(ctx context.Context, watcher *Wa
 	}
 
 	go s.PriceWatch(ctx, watcher.PushToken, stopChan)
+}
+
+func (s *service) addWatcherForAddress(address string, watcher *Watcher) {
+	var items *watchers
+	var ok bool
+	s.mx.Lock()
+	items, ok = s.cachedWatcherByAddress[address]
+	if !ok || items == nil {
+		items = new(watchers)
+		s.cachedWatcherByAddress[address] = items
+	}
+	items.Add(watcher)
+	s.mx.Unlock()
 }
 
 func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
