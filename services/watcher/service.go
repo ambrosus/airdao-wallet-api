@@ -262,31 +262,32 @@ func (s *service) ApiPriceWatch(ctx context.Context) {
 }
 
 func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan chan struct{}) {
+	s.mx.RLock()
+	watcher, ok := s.cachedWatcher[watcherId]
+	s.mx.RUnlock()
+	if !ok || watcher == nil {
+		return
+	}
+
+	decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
+	if err != nil {
+		s.logger.Errorf("PriceWatch base64.StdEncoding.DecodeString error %v\n", err)
+		return
+	}
+
 	for {
 		select {
 		case <-stopChan:
 			// fmt.Println("Stopping price goroutine...")
 			return
 		default:
-			s.mx.RLock()
-			watcher, ok := s.cachedWatcher[watcherId]
-			s.mx.RUnlock()
-			if !ok {
-				continue
-			}
-
-			if watcher != nil && watcher.Threshold != nil && watcher.TokenPrice != nil {
+			if watcher.Threshold != nil && watcher.TokenPrice != nil {
 				percentage := (s.cachedPrice - *watcher.TokenPrice) / *watcher.TokenPrice * 100
 				roundedPercentage := math.Abs((math.Round(percentage*100) / 100))
 				roundedPrice := strconv.FormatFloat(s.cachedPrice, 'f', 5, 64)
 
-				decodedPushToken, err := base64.StdEncoding.DecodeString(watcher.PushToken)
-				if err != nil {
-					s.logger.Errorf("PriceWatch base64.StdEncoding.DecodeString error %v\n", err)
-				}
-
 				if percentage >= float64(*watcher.Threshold) {
-					if *watcher.PriceNotification == ON {
+					if watcher.PriceNotification == ON {
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 						title := "Price Alert"
 						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
@@ -315,7 +316,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 				}
 
 				if percentage <= -float64(*watcher.Threshold) {
-					if *watcher.PriceNotification == ON {
+					if watcher.PriceNotification == ON {
 						data := map[string]interface{}{"type": "price-alert", "percentage": roundedPercentage}
 						title := "Price Alert"
 						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
@@ -366,7 +367,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 	takeTx := true
 
 	for _, watcher := range watchers.watchers {
-		if watcher != nil && *watcher.TxNotification == ON && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
+		if watcher != nil && watcher.TxNotification == ON && (watcher.Addresses != nil && len(*watcher.Addresses) > 0) {
 			itemId := txHash + watcher.PushToken
 			if _, ok := cache[itemId]; !ok {
 				if takeTx {
