@@ -14,6 +14,7 @@ type Tx struct {
 	Hash      string `json:"hash"`
 	Value     struct {
 		Ether float64 `json:"ether"`
+		Symbol *string `json:"symbol,omitempty"`
 	} `json:"value"`
 
 	Timestamp float64 `json:"timestamp"`
@@ -22,6 +23,10 @@ type Tx struct {
 type ApiAddressData struct {
 	Data    []Tx    `json:"data"`
 	Account Account `json:"account"`
+}
+
+type ApiTxData struct {
+	Data    []Tx    `json:"data"`
 }
 
 type PriceData struct {

@@ -14,6 +14,8 @@ func TestInit(t *testing.T) {
 		port             string
 		explorerApi      string
 		tokenPriceUrl    string
+		explorerToken    string
+		callbackUrl      string
 		mongoDbName      string
 		mongoDbUrl       string
 		firebaseCredPath string
@@ -33,6 +35,8 @@ func TestInit(t *testing.T) {
 		os.Setenv("MONGO_DB_URL", env.mongoDbUrl)
 		os.Setenv("FIREBASE_CRED_PATH", env.firebaseCredPath)
 		os.Setenv("ANDROID_CHANNEL_NAME", env.androidChannel)
+		os.Setenv("EXPLORER_TOKEN", env.explorerToken)
+		os.Setenv("CALLBACK_URL", env.callbackUrl)
 	}
 
 	tests := []struct {
@@ -49,6 +53,8 @@ func TestInit(t *testing.T) {
 					port:             "5000",
 					explorerApi:      "http://example.com/v2",
 					tokenPriceUrl:    "http://example.com/v2",
+					explorerToken:    "http://example.com/v2",
+					callbackUrl:      "qwerty",
 					mongoDbName:      "example",
 					mongoDbUrl:       "http://127.0.0.1",
 					firebaseCredPath: "./example.json",
@@ -60,6 +66,8 @@ func TestInit(t *testing.T) {
 				Port:          "5000",
 				ExplorerApi:   "http://example.com/v2",
 				TokenPriceUrl: "http://example.com/v2",
+				ExplorerToken: "http://example.com/v2",
+				CallbackUrl:   "qwerty",
 				MongoDb: config.MongoDb{
 					MongoDbName: "example",
 					MongoDbUrl:  "http://127.0.0.1",

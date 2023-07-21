@@ -12,6 +12,8 @@ type Config struct {
 	Port          string `required:"true" envconfig:"PORT"`
 	ExplorerApi   string `required:"true" envconfig:"EXPLORER_API"`
 	TokenPriceUrl string `required:"true" envconfig:"TOKEN_PRICE_URL"`
+	CallbackUrl   string `required:"true" envconfig:"CALLBACK_URL"`
+	ExplorerToken string `required:"true" envconfig:"EXPLORER_TOKEN"`
 
 	MongoDb
 	Firebase
