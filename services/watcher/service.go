@@ -395,7 +395,11 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 					if tx.Value.Symbol == nil {
 						tokenSymbol = "AMB"
 					} else {
-						tokenSymbol = *tx.Value.Symbol
+						if *tx.Value.Symbol == "" {
+							tokenSymbol = "HPT"
+						} else {
+							tokenSymbol = *tx.Value.Symbol
+						}
 					}
 					data = map[string]interface{}{"type": "transaction-alert", "timestamp": tx.Timestamp, "sender": cutFromAddress, "to": cutToAddress}
 				}
