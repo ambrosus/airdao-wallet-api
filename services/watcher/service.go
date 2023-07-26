@@ -528,6 +528,8 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 		return errors.New("watcher not found")
 	}
 
+	fmt.Printf("UpdateWatcher(%v, %v, %v, %v, %v)\n", pushToken, addresses, threshold, txNotification, priceNotification)
+
 	if addresses != nil && len(*addresses) > 0 {
 		var req bytes.Buffer
 		req.WriteString("{\"id\":\"")
