@@ -2,6 +2,7 @@ package watcher
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -92,11 +93,13 @@ func (w *Watcher) SetLastTx(address string, tx string) {
 }
 
 func (w *Watcher) SetThreshold(threshold float64) {
+	fmt.Printf("SetThreshold %v\n", threshold)
 	w.Threshold = &threshold
 	w.UpdatedAt = time.Now()
 }
 
 func (w *Watcher) SetTokenPrice(price float64) {
+	fmt.Printf("SetTokenPrice %v\n", price)
 	w.TokenPrice = &price
 	w.UpdatedAt = time.Now()
 }
