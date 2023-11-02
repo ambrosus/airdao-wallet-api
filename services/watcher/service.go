@@ -293,6 +293,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
 						sent := false
 
+                        fmt.Printf("Title: %s, Body: %s, Token: %s, Data: %+v\n", title, body, string(decodedPushToken), data)
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Up) cloudMessagingSvc.SendMessage error %v\n", err)
@@ -322,6 +323,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
 						sent := false
 
+                        fmt.Printf("Title: %s, Body: %s, Token: %s, Data: %+v\n", title, body, string(decodedPushToken), data)
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Down) cloudMessagingSvc.SendMessage error %v\n", err)
@@ -415,6 +417,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s %s", cutFromAddress, cutToAddress, roundedAmount, tokenSymbol)
 				sent := false
 
+                fmt.Printf("Title: %s, Body: %s, Token: %s, Data: %+v\n", title, body, string(decodedPushToken), data)
 				response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
