@@ -334,6 +334,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							sent = true
 						}
 
+                        fmt.Printf("AddNotification, PriceWatch: title: %v, body: %v, sent: %t, time: %v\n", title, body, sent, time.Now())
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
 
@@ -428,6 +429,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 					sent = true
 				}
 
+                fmt.Printf("AddNotification, TransactionWatch: title: %v, body: %v, sent: %t, time: %v\n", title, body, sent, time.Now())
 				watcher.AddNotification(title, body, sent, time.Now())
 
 				fmt.Printf("Tx notify: %v:%v\n", txHash, watcher.PushToken)
