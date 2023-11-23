@@ -470,6 +470,8 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 		return nil, errors.New("watcher not found")
 	}
 
+	fmt.Printf("!!GetWatcher -> watcher %v\n", watcher)
+
 	s.mx.Lock()
 	s.cachedWatcher[encodePushToken] = watcher
 	s.mx.Unlock()
