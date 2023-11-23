@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"fmt"
 
 	"firebase.google.com/go/messaging"
 )
@@ -41,6 +42,9 @@ func (s *service) SendMessage(ctx context.Context, title, body, pushToken string
 			androidData[key] = strconv.FormatBool(v)
 		}
 	}
+
+	fmt.Printf("AndroidData: %+v\n", androidData)
+	fmt.Printf("IOSData: %+v\n", data)
 
 	response, err := s.fcmClient.Send(ctx, &messaging.Message{
 
