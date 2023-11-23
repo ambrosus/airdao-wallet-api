@@ -42,6 +42,9 @@ func (s *service) SendMessage(ctx context.Context, title, body, pushToken string
 		}
 	}
 
+	fmt.Printf("AndroidData: %+v\n", androidData)
+	fmt.Printf("IOSData: %+v\n", data)
+
 	response, err := s.fcmClient.Send(ctx, &messaging.Message{
 
 		// iOS
