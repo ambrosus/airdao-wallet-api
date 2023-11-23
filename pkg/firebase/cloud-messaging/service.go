@@ -40,6 +40,8 @@ func (s *service) SendMessage(ctx context.Context, title, body, pushToken string
 			androidData[key] = strconv.Itoa(v)
 		case bool:
 			androidData[key] = strconv.FormatBool(v)
+		case float64:
+		    androidData[key] = strconv.FormatFloat(v, 'f', -1, 64)
 		}
 	}
 
