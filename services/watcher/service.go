@@ -422,9 +422,10 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
 					if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
-						s.mx.RLock()
-						watchers.Remove(watcher.PushToken)
-						s.mx.RUnlock()
+					    return
+// 						s.mx.RLock()
+// 						watchers.Remove(watcher.PushToken) //TODO: check if this is needed
+// 						s.mx.RUnlock()
 					}
 				}
 
@@ -470,7 +471,7 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 		return nil, errors.New("watcher not found")
 	}
 
-	fmt.Printf("!!GetWatcher -> watcher %v\n", watcher)
+	fmt.Printf("GetWatcher -> watcher %v\n", watcher)
 
 	s.mx.Lock()
 	s.cachedWatcher[encodePushToken] = watcher
@@ -495,6 +496,8 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return errors.New("watcher for this address and token already exist")
 	}
 
+	fmt.Printf("GetWatcherHistoryPrices -> dbWatcher %v\n", dbWatcher)
+
 	watcher, err := NewWatcher(encodePushToken)
 	if err != nil {
 		return err
@@ -516,6 +519,8 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	if err := s.repository.CreateWatcher(ctx, watcher); err != nil {
 		return err
 	}
+
+	fmt.Printf("GetWatcherHistoryPrices -> watcher after repository create %v\n", dbWatcher)
 
 	s.mx.Lock()
 	s.cachedWatcher[watcher.PushToken] = watcher

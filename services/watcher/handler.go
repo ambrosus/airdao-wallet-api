@@ -3,6 +3,7 @@ package watcher
 import (
 	"errors"
 	"net/url"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -48,6 +49,8 @@ func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	fmt.Printf("GetWatcherHandler -> watcher: %+v\n", watcher)
 
 	return c.JSON(watcher)
 }

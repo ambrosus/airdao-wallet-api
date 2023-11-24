@@ -3,6 +3,7 @@ package watcher
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -81,6 +82,8 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 		}
 		watchers = append(watchers, &watcher)
 	}
+
+	fmt.Printf("GetWatcherList -> watchers: %v\n", watchers)
 
 	// Check for any errors that occurred during iteration
 	if err := cur.Err(); err != nil {
