@@ -293,7 +293,6 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						body := fmt.Sprintf("🚀 AMB Price changed on +%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
 						sent := false
 
-                        fmt.Printf("Title: %s, Body: %s, Token: %s, Data: %+v\n", title, body, string(decodedPushToken), data)
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Up) cloudMessagingSvc.SendMessage error %v\n", err)
@@ -323,7 +322,6 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						body := fmt.Sprintf("🔻 AMB Price changed on -%v%s! Current price $%v\n", roundedPercentage, "%", roundedPrice)
 						sent := false
 
-                        fmt.Printf("Title: %s, Body: %s, Token: %s, Data: %+v\n", title, body, string(decodedPushToken), data)
 						response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Down) cloudMessagingSvc.SendMessage error %v\n", err)
@@ -336,7 +334,6 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							sent = true
 						}
 
-                        fmt.Printf("AddNotification, PriceWatch: title: %v, body: %v, sent: %t, time: %v\n", title, body, sent, time.Now())
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
 
@@ -417,7 +414,6 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				body := fmt.Sprintf("From: %s\nTo: %s\nAmount: %s %s", cutFromAddress, cutToAddress, roundedAmount, tokenSymbol)
 				sent := false
 
-                fmt.Printf("Title: %s, Body: %s, Token: %s, Data: %+v\n", title, body, string(decodedPushToken), data)
 				response, err := s.cloudMessagingSvc.SendMessage(ctx, title, body, string(decodedPushToken), data)
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
@@ -433,10 +429,8 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 					sent = true
 				}
 
-                fmt.Printf("AddNotification, TransactionWatch: title: %v, body: %v, sent: %t, time: %v\n", title, body, sent, time.Now())
 				watcher.AddNotification(title, body, sent, time.Now())
 
-				fmt.Printf("Tx notify: %v:%v\n", txHash, watcher.PushToken)
 				cache[itemId] = true
 			}
 
@@ -471,7 +465,6 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 		return nil, errors.New("watcher not found")
 	}
 
-	fmt.Printf("GetWatcher -> watcher %v\n", watcher)
 
 	s.mx.Lock()
 	s.cachedWatcher[encodePushToken] = watcher
@@ -496,7 +489,6 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return errors.New("watcher for this address and token already exist")
 	}
 
-	fmt.Printf("GetWatcherHistoryPrices -> dbWatcher %v\n", dbWatcher)
 
 	watcher, err := NewWatcher(encodePushToken)
 	if err != nil {
@@ -520,7 +512,6 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return err
 	}
 
-	fmt.Printf("GetWatcherHistoryPrices -> watcher after repository create %v\n", dbWatcher)
 
 	s.mx.Lock()
 	s.cachedWatcher[watcher.PushToken] = watcher
@@ -540,7 +531,6 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 		return errors.New("watcher not found")
 	}
 
-	fmt.Printf("UpdateWatcher(%v, %v, %v, %v, %v)\n", pushToken, addresses, threshold, txNotification, priceNotification)
 
 	if addresses != nil && len(*addresses) > 0 {
 		var req bytes.Buffer
