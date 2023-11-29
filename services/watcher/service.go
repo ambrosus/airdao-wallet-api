@@ -422,10 +422,9 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
 					if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
-					    return
-// 						s.mx.RLock()
-// 						watchers.Remove(watcher.PushToken) //TODO: check if this is needed
-// 						s.mx.RUnlock()
+ 						s.mx.RLock()
+ 						watchers.Remove(watcher.PushToken) //TODO: check if this is needed
+ 						s.mx.RUnlock()
 					}
 				}
 
