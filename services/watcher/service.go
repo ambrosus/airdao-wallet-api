@@ -297,6 +297,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Up) cloudMessagingSvc.SendMessage error %v\n", err)
 							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								// Set date of fail and remove watcher if success date more than 7 days earlier than this date
 								watcher.SetLastFailDate(time.Now())
 								return
 							}
@@ -306,8 +307,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							sent = true
 						}
 
+						// Set date of success to compare with date of fail
 						watcher.SetLastSuccessDate(time.Now())
-
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
 
@@ -329,6 +330,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Down) cloudMessagingSvc.SendMessage error %v\n", err)
 							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								// Set date of fail and remove watcher if success date more than 7 days earlier than this date
 								watcher.SetLastFailDate(time.Now())
 								return
 							}
@@ -338,6 +340,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							sent = true
 						}
 
+						// Set date of success to compare with date of fail
 						watcher.SetLastSuccessDate(time.Now())
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
@@ -423,6 +426,7 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
 					if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+						// Set date of fail and remove watcher if success date more than 7 days earlier than this date
 						watcher.SetLastFailDate(time.Now())
 
 						s.mx.RLock()
@@ -435,8 +439,8 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 					sent = true
 				}
 
+				// Set date of success to compare with date of fail
 				watcher.SetLastSuccessDate(time.Now())
-
 				watcher.AddNotification(title, body, sent, time.Now())
 
 				cache[itemId] = true
