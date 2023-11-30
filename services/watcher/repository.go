@@ -3,6 +3,8 @@ package watcher
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,11 +15,13 @@ import (
 //go:generate mockgen -source=repository.go -destination=mocks/repository_mock.go
 type Repository interface {
 	GetWatcher(ctx context.Context, filters bson.M) (*Watcher, error)
+	GetAllWatchers(ctx context.Context) ([]*Watcher, error)
 	GetWatcherList(ctx context.Context, filters bson.M, page int) ([]*Watcher, error)
 
 	CreateWatcher(ctx context.Context, watcher *Watcher) error
 	UpdateWatcher(ctx context.Context, watcher *Watcher) error
 	DeleteWatcher(ctx context.Context, filters bson.M) error
+	DeleteWatchersWithStaleData(ctx context.Context) error
 }
 
 type repository struct {
@@ -58,6 +62,56 @@ func (r *repository) GetWatcher(ctx context.Context, filters bson.M) (*Watcher, 
 	return &watcher, nil
 }
 
+func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
+	collection := r.db.Database(r.dbName).Collection(r.dbCollectionName)
+
+	filter := bson.D{{}}
+
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		r.logger.Errorf("unable to find watcher due to internal error: %v", err)
+		return nil, nil
+	}
+
+	defer cursor.Close(ctx)
+
+	var watchers []*Watcher
+	for cursor.Next(ctx) {
+		var watcher Watcher
+		if err := cursor.Decode(&watcher); err != nil {
+			r.logger.Errorf("Unable to decode watcher document: %v", err)
+			return nil, nil
+		}
+		watchers = append(watchers, &watcher)
+	}
+
+	if err := cursor.Err(); err != nil {
+		r.logger.Errorf("cursor iteration error: %v", err)
+		return nil, nil
+	}
+
+	return watchers, nil
+}
+
+func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
+	watchers, err := r.GetAllWatchers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, watcher := range watchers {
+		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
+			filter := bson.M{"_id": watcher.ID}
+			if err := r.DeleteWatcher(ctx, filter); err != nil {
+				return err
+			}
+			fmt.Printf("Watcher with ID %s deleted due to stale data\n", watcher.ID.Hex())
+		}
+	}
+
+	return nil
+}
+
 func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page int) ([]*Watcher, error) {
 	pageSize := 100
 
@@ -81,7 +135,6 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 		}
 		watchers = append(watchers, &watcher)
 	}
-
 
 	// Check for any errors that occurred during iteration
 	if err := cur.Err(); err != nil {

@@ -49,7 +49,6 @@ func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-
 	return c.JSON(watcher)
 }
 
@@ -165,8 +164,8 @@ type WatcherCallbackItem struct {
 }
 
 type WatcherCallback struct {
-	Id     string `json:"id" validate:"required"`
-	Items  []WatcherCallbackItem `json:"items" validate:"required"`
+	Id    string                `json:"id" validate:"required"`
+	Items []WatcherCallbackItem `json:"items" validate:"required"`
 }
 
 func (h *Handler) WatcherCallbackHandler(c *fiber.Ctx) error {

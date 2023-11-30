@@ -45,7 +45,7 @@ type Service interface {
 }
 
 type watchers struct {
-	watchers    map[string]*Watcher
+	watchers map[string]*Watcher
 }
 
 type service struct {
@@ -98,7 +98,7 @@ func NewService(
 
 		explorerUrl:   explorerUrl,
 		tokenPriceUrl: tokenPriceUrl,
-		callbackUrl: callbackUrl,
+		callbackUrl:   callbackUrl,
 		explorerToken: explorerToken,
 
 		cachedChan:             make(map[string]chan struct{}),
@@ -123,7 +123,7 @@ func (self *watchers) Remove(pushToken string) {
 }
 
 func (self *watchers) IsEmpty() bool {
-    return self.watchers == nil || len(self.watchers) == 0
+	return self.watchers == nil || len(self.watchers) == 0
 }
 
 func (s *service) Init(ctx context.Context) error {
@@ -169,7 +169,7 @@ func (s *service) keepAlive(ctx context.Context) {
 				}
 
 				if watchers == nil {
-			    		break
+					break
 				}
 
 				for _, watcher := range watchers {
@@ -225,7 +225,7 @@ func (s *service) keepAlive(ctx context.Context) {
 					time.Sleep(5 * time.Second)
 					continue
 				}
-				break;
+				break
 			}
 			time.Sleep(30 * time.Second)
 			tries = 6
@@ -297,6 +297,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Up) cloudMessagingSvc.SendMessage error %v\n", err)
 							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								watcher.SetLastFailDate(time.Now())
 								return
 							}
 						}
@@ -304,6 +305,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						if response != nil {
 							sent = true
 						}
+
+						watcher.SetLastSuccessDate(time.Now())
 
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
@@ -326,6 +329,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Down) cloudMessagingSvc.SendMessage error %v\n", err)
 							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								watcher.SetLastFailDate(time.Now())
 								return
 							}
 						}
@@ -334,6 +338,7 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							sent = true
 						}
 
+						watcher.SetLastSuccessDate(time.Now())
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
 
@@ -418,15 +423,19 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
 					if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
- 						s.mx.RLock()
- 						watchers.Remove(watcher.PushToken) //TODO: check if this is needed
- 						s.mx.RUnlock()
+						watcher.SetLastFailDate(time.Now())
+
+						s.mx.RLock()
+						watchers.Remove(watcher.PushToken)
+						s.mx.RUnlock()
 					}
 				}
 
 				if response != nil {
 					sent = true
 				}
+
+				watcher.SetLastSuccessDate(time.Now())
 
 				watcher.AddNotification(title, body, sent, time.Now())
 
@@ -464,7 +473,6 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 		return nil, errors.New("watcher not found")
 	}
 
-
 	s.mx.Lock()
 	s.cachedWatcher[encodePushToken] = watcher
 	s.mx.Unlock()
@@ -488,7 +496,6 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return errors.New("watcher for this address and token already exist")
 	}
 
-
 	watcher, err := NewWatcher(encodePushToken)
 	if err != nil {
 		return err
@@ -511,7 +518,6 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return err
 	}
 
-
 	s.mx.Lock()
 	s.cachedWatcher[watcher.PushToken] = watcher
 	s.mx.Unlock()
@@ -529,7 +535,6 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 	if watcher == nil {
 		return errors.New("watcher not found")
 	}
-
 
 	if addresses != nil && len(*addresses) > 0 {
 		var req bytes.Buffer
@@ -794,5 +799,5 @@ func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 }
 
 func (self *service) GetExplorerId() string {
-    return self.explorerToken
+	return self.explorerToken
 }
