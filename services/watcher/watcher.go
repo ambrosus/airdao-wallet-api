@@ -129,3 +129,8 @@ func (w *Watcher) SetPriceNotification(v string) {
 	w.PriceNotification = v
 	w.UpdatedAt = time.Now()
 }
+
+func (w *Watcher) SetPushToken(v string) {
+	w.PushToken = v
+	w.UpdatedAt = time.Now()
+}

@@ -30,6 +30,8 @@ func (h *Handler) SetupRoutes(router fiber.Router) {
 	router.Delete("/watcher-addresses", h.DeleteWatcherAddressesHandler)
 
 	router.Post("/explorer-callback", h.WatcherCallbackHandler)
+
+	router.Put("/push-token/:oldPushToken/:newPushToken", h.UpdateWatcherPushTokenHandler)
 }
 
 func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
@@ -48,7 +50,6 @@ func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 
 	return c.JSON(watcher)
 }
@@ -159,14 +160,39 @@ func (h *Handler) DeleteWatcherAddressesHandler(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "OK"})
 }
 
+type UpdateWatcherPushToken struct {
+	OldPushToken string `json:"old_push_token" validate:"required"`
+	NewPushToken string `json:"new_push_token" validate:"required"`
+}
+
+func (h *Handler) UpdateWatcherPushTokenHandler(c *fiber.Ctx) error {
+	var reqBody UpdateWatcherPushToken
+
+	if err := c.BodyParser(&reqBody); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	if err := Validate(reqBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if err := h.service.UpdateWatcherPushToken(c.Context(), reqBody.OldPushToken, reqBody.NewPushToken); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return nil
+}
+
 type WatcherCallbackItem struct {
 	Address string `json:"address" validate:"required"`
 	TxHash  string `json:"txHash" validate:"required"`
 }
 
 type WatcherCallback struct {
-	Id     string `json:"id" validate:"required"`
-	Items  []WatcherCallbackItem `json:"items" validate:"required"`
+	Id    string                `json:"id" validate:"required"`
+	Items []WatcherCallbackItem `json:"items" validate:"required"`
 }
 
 func (h *Handler) WatcherCallbackHandler(c *fiber.Ctx) error {

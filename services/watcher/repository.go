@@ -82,7 +82,6 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 		watchers = append(watchers, &watcher)
 	}
 
-
 	// Check for any errors that occurred during iteration
 	if err := cur.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)

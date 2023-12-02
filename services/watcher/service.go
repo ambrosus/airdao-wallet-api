@@ -42,10 +42,11 @@ type Service interface {
 	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
+	UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error
 }
 
 type watchers struct {
-	watchers    map[string]*Watcher
+	watchers map[string]*Watcher
 }
 
 type service struct {
@@ -98,7 +99,7 @@ func NewService(
 
 		explorerUrl:   explorerUrl,
 		tokenPriceUrl: tokenPriceUrl,
-		callbackUrl: callbackUrl,
+		callbackUrl:   callbackUrl,
 		explorerToken: explorerToken,
 
 		cachedChan:             make(map[string]chan struct{}),
@@ -123,7 +124,7 @@ func (self *watchers) Remove(pushToken string) {
 }
 
 func (self *watchers) IsEmpty() bool {
-    return self.watchers == nil || len(self.watchers) == 0
+	return self.watchers == nil || len(self.watchers) == 0
 }
 
 func (s *service) Init(ctx context.Context) error {
@@ -169,7 +170,7 @@ func (s *service) keepAlive(ctx context.Context) {
 				}
 
 				if watchers == nil {
-			    		break
+					break
 				}
 
 				for _, watcher := range watchers {
@@ -225,7 +226,7 @@ func (s *service) keepAlive(ctx context.Context) {
 					time.Sleep(5 * time.Second)
 					continue
 				}
-				break;
+				break
 			}
 			time.Sleep(30 * time.Second)
 			tries = 6
@@ -418,9 +419,9 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
 					if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
- 						s.mx.RLock()
- 						watchers.Remove(watcher.PushToken) //TODO: check if this is needed
- 						s.mx.RUnlock()
+						s.mx.RLock()
+						watchers.Remove(watcher.PushToken) //TODO: check if this is needed
+						s.mx.RUnlock()
 					}
 				}
 
@@ -464,7 +465,6 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 		return nil, errors.New("watcher not found")
 	}
 
-
 	s.mx.Lock()
 	s.cachedWatcher[encodePushToken] = watcher
 	s.mx.Unlock()
@@ -488,7 +488,6 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return errors.New("watcher for this address and token already exist")
 	}
 
-
 	watcher, err := NewWatcher(encodePushToken)
 	if err != nil {
 		return err
@@ -511,7 +510,6 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 		return err
 	}
 
-
 	s.mx.Lock()
 	s.cachedWatcher[watcher.PushToken] = watcher
 	s.mx.Unlock()
@@ -529,7 +527,6 @@ func (s *service) UpdateWatcher(ctx context.Context, pushToken string, addresses
 	if watcher == nil {
 		return errors.New("watcher not found")
 	}
-
 
 	if addresses != nil && len(*addresses) > 0 {
 		var req bytes.Buffer
@@ -694,6 +691,34 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 	return nil
 }
 
+func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error {
+	encodePushToken := base64.StdEncoding.EncodeToString([]byte(olpPushToken))
+
+	watcher, err := s.GetWatcher(ctx, olpPushToken)
+	if err != nil {
+		s.logger.Errorf("UpdateWatcherPushToken GetWatcher error %v\n", err)
+		return err
+	}
+	if watcher == nil {
+		s.logger.Errorf("UpdateWatcherPushToken watcher not found\n")
+		return err
+	}
+
+	watcher.SetPushToken(base64.StdEncoding.EncodeToString([]byte(newPushToken)))
+
+	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+		s.logger.Errorf("UpdateWatcherPushToken repository.UpdateWatcher error %v\n", err)
+		return err
+	}
+
+	s.mx.Lock()
+	delete(s.cachedWatcher, encodePushToken)
+	s.cachedWatcher[watcher.PushToken] = watcher
+	s.mx.Unlock()
+
+	return nil
+}
+
 func (s *service) setUpStopChanAndStartWatchers(ctx context.Context, watcher *Watcher) {
 	s.mx.Lock()
 	stopChan := make(chan struct{})
@@ -794,5 +819,5 @@ func (s *service) doRequest(url string, body io.Reader, res interface{}) error {
 }
 
 func (self *service) GetExplorerId() string {
-    return self.explorerToken
+	return self.explorerToken
 }
