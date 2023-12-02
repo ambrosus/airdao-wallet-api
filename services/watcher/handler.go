@@ -31,7 +31,7 @@ func (h *Handler) SetupRoutes(router fiber.Router) {
 
 	router.Post("/explorer-callback", h.WatcherCallbackHandler)
 
-	router.Put("/push-token/:oldPushToken/:newPushToken", h.UpdateWatcherPushTokenHandler)
+	router.Put("/push-token", h.UpdateWatcherPushTokenHandler)
 }
 
 func (h *Handler) GetWatcherHandler(c *fiber.Ctx) error {
