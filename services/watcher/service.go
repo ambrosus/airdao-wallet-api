@@ -42,6 +42,7 @@ type Service interface {
 	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
+	DeleteWatchersWithStaleData(ctx context.Context) error
 }
 
 type watchers struct {
@@ -699,6 +700,25 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *service) DeleteWatchersWithStaleData(ctx context.Context) error {
+	if err := s.repository.DeleteWatchersWithStaleData(ctx); err != nil {
+		s.logger.Errorf("DeleteWatchersWithStaleData repository.DeleteWatchersWithStaleData error %v\n", err)
+		return err
+	}
+
+	// Delete from cache
+	s.mx.RLock()
+	for pushToken, watcher := range s.cachedWatcher {
+		if watcher.LastSuccessDate.Before(time.Now().AddDate(0, 0, -7)) {
+			delete(s.cachedWatcher, pushToken)
+			delete(s.cachedChan, pushToken)
+		}
+	}
+	s.mx.RUnlock()
 
 	return nil
 }

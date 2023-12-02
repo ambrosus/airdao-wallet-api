@@ -13,10 +13,10 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
 
@@ -103,22 +103,22 @@ func main() {
 		ServerHeader: "AIRDAO-Mobile-Api", // add custom server header
 	}
 
-	// Create cron job
-	c := cron.New()
-
-	// Schedule job for every 7 days
-	_, err = c.AddFunc("0 0 0 */7 * *", func() {
-		err := watcherRepository.DeleteWatchersWithStaleData(context.Background())
-		if err != nil {
-			zapLogger.Error("Error in DeleteWatchersWithStaleData:", err)
-		}
-	})
-	if err != nil {
-		zapLogger.Fatal("Error scheduling cron job:", err)
+	// Run DeleteWatchersWithStaleData on start for check and delete stale data
+	if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
+		zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
 	}
 
-	// Start the cron scheduler
-	c.Start()
+	// Run DeleteWatchersWithStaleData every 24 hours for check and delete stale data
+	go func() {
+		for {
+			err := watcherService.DeleteWatchersWithStaleData(context.Background())
+			if err != nil {
+				zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
+			}
+
+			time.Sleep(24 * time.Hour)
+		}
+	}()
 
 	// Create fiber app
 	app := fiber.New(config)
@@ -157,9 +157,6 @@ func main() {
 
 	// Wait for the termination signal
 	<-ctx.Done()
-
-	// Stop cron job
-	c.Stop()
 
 	// Perform the graceful shutdown by closing the server
 	if err := app.Shutdown(); err != nil {
