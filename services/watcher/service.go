@@ -713,7 +713,7 @@ func (s *service) DeleteWatchersWithStaleData(ctx context.Context) error {
 	// Delete from cache
 	s.mx.RLock()
 	for pushToken, watcher := range s.cachedWatcher {
-		if watcher.LastSuccessDate.Before(time.Now().AddDate(0, 0, -7)) {
+		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
 			delete(s.cachedWatcher, pushToken)
 			delete(s.cachedChan, pushToken)
 		}
