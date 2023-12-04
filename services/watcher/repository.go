@@ -78,7 +78,7 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 	var watchers []*Watcher
 	for cursor.Next(ctx) {
 		watcher := new(Watcher)
-		if err := cursor.Decode(&watcher); err != nil {
+		if err := cursor.Decode(watcher); err != nil {
 			r.logger.Errorf("Unable to decode watcher document: %v", err)
 			return nil, nil
 		}
