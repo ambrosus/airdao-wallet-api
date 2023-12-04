@@ -77,12 +77,12 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 
 	var watchers []*Watcher
 	for cursor.Next(ctx) {
-		var watcher Watcher
+		watcher := new(Watcher)
 		if err := cursor.Decode(&watcher); err != nil {
 			r.logger.Errorf("Unable to decode watcher document: %v", err)
 			return nil, nil
 		}
-		watchers = append(watchers, &watcher)
+		watchers = append(watchers, watcher)
 	}
 
 	if err := cursor.Err(); err != nil {
@@ -128,12 +128,12 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 
 	var watchers []*Watcher
 	for cur.Next(ctx) {
-		var watcher Watcher
+		watcher := new(Watcher)
 		if err := cur.Decode(&watcher); err != nil {
 			r.logger.Errorf("unable to decode watcher document: %v", err)
 			return nil, err
 		}
-		watchers = append(watchers, &watcher)
+		watchers = append(watchers, watcher)
 	}
 
 	// Check for any errors that occurred during iteration
