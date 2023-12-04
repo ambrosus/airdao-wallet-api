@@ -33,6 +33,9 @@ type Watcher struct {
 
 	HistoricalNotifications *[]*HistoryNotification `json:"historical_notifications" bson:"historical_notifications"`
 
+	LastSuccessDate time.Time `json:"last_success_date" bson:"last_success_date"`
+	LastFailDate    time.Time `json:"last_fail_date" bson:"last_fail_date"`
+
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
 }
@@ -53,6 +56,9 @@ func NewWatcher(pushToken string) (*Watcher, error) {
 
 		Addresses:               nil,
 		HistoricalNotifications: nil,
+
+		LastSuccessDate: time.Time{},
+		LastFailDate:    time.Time{},
 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -127,6 +133,16 @@ func (w *Watcher) SetTxNotification(v string) {
 
 func (w *Watcher) SetPriceNotification(v string) {
 	w.PriceNotification = v
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetLastFailDate(date time.Time) {
+	w.LastFailDate = date
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetLastSuccessDate(date time.Time) {
+	w.LastSuccessDate = date
 	w.UpdatedAt = time.Now()
 }
 

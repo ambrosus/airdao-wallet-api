@@ -42,6 +42,7 @@ type Service interface {
 	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
+	DeleteWatchersWithStaleData(ctx context.Context) error
 	UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error
 }
 
@@ -298,6 +299,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Up) cloudMessagingSvc.SendMessage error %v\n", err)
 							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								// Set date of fail and remove watcher if success date more than 7 days earlier than this date
+								watcher.SetLastFailDate(time.Now())
 								return
 							}
 						}
@@ -306,6 +309,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							sent = true
 						}
 
+						// Set date of success to compare with date of fail
+						watcher.SetLastSuccessDate(time.Now())
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
 
@@ -327,6 +332,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 						if err != nil {
 							s.logger.Errorf("PriceWatch (Down) cloudMessagingSvc.SendMessage error %v\n", err)
 							if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+								// Set date of fail and remove watcher if success date more than 7 days earlier than this date
+								watcher.SetLastFailDate(time.Now())
 								return
 							}
 						}
@@ -335,6 +342,8 @@ func (s *service) PriceWatch(ctx context.Context, watcherId string, stopChan cha
 							sent = true
 						}
 
+						// Set date of success to compare with date of fail
+						watcher.SetLastSuccessDate(time.Now())
 						watcher.AddNotification(title, body, sent, time.Now())
 					}
 
@@ -419,8 +428,11 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 				if err != nil {
 					s.logger.Errorf("TransactionWatch cloudMessagingSvc.SendMessage error %v\n", err)
 					if err.Error() == "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found." {
+						// Set date of fail and remove watcher if success date more than 7 days earlier than this date
+						watcher.SetLastFailDate(time.Now())
+
 						s.mx.RLock()
-						watchers.Remove(watcher.PushToken) //TODO: check if this is needed
+						watchers.Remove(watcher.PushToken)
 						s.mx.RUnlock()
 					}
 				}
@@ -429,6 +441,8 @@ func (s *service) TransactionWatch(ctx context.Context, address string, txHash s
 					sent = true
 				}
 
+				// Set date of success to compare with date of fail
+				watcher.SetLastSuccessDate(time.Now())
 				watcher.AddNotification(title, body, sent, time.Now())
 
 				cache[itemId] = true
@@ -687,6 +701,25 @@ func (s *service) DeleteWatcherAddresses(ctx context.Context, pushToken string, 
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *service) DeleteWatchersWithStaleData(ctx context.Context) error {
+	if err := s.repository.DeleteWatchersWithStaleData(ctx); err != nil {
+		s.logger.Errorf("DeleteWatchersWithStaleData repository.DeleteWatchersWithStaleData error %v\n", err)
+		return err
+	}
+
+	// Delete from cache
+	s.mx.RLock()
+	for pushToken, watcher := range s.cachedWatcher {
+		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
+			delete(s.cachedWatcher, pushToken)
+			delete(s.cachedChan, pushToken)
+		}
+	}
+	s.mx.RUnlock()
 
 	return nil
 }

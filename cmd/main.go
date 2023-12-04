@@ -13,6 +13,7 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -101,6 +102,23 @@ func main() {
 	config := fiber.Config{
 		ServerHeader: "AIRDAO-Mobile-Api", // add custom server header
 	}
+
+	// Run DeleteWatchersWithStaleData on start for check and delete stale data
+	if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
+		zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
+	}
+
+	// Run DeleteWatchersWithStaleData every 24 hours for check and delete stale data
+	go func() {
+		for {
+			err := watcherService.DeleteWatchersWithStaleData(context.Background())
+			if err != nil {
+				zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
+			}
+
+			time.Sleep(24 * time.Hour)
+		}
+	}()
 
 	// Create fiber app
 	app := fiber.New(config)
