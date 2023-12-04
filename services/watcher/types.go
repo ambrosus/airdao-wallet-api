@@ -13,7 +13,7 @@ type Tx struct {
 	To        string `json:"to"`
 	Hash      string `json:"hash"`
 	Value     struct {
-		Ether float64 `json:"ether"`
+		Ether  float64 `json:"ether"`
 		Symbol *string `json:"symbol,omitempty"`
 	} `json:"value"`
 
@@ -26,7 +26,7 @@ type ApiAddressData struct {
 }
 
 type ApiTxData struct {
-	Data    []Tx    `json:"data"`
+	Data []Tx `json:"data"`
 }
 
 type PriceData struct {
