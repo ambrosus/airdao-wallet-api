@@ -42,6 +42,7 @@ type Service interface {
 	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
+	DeleteWatchersWithStaleData(ctx context.Context) error
 	UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error
 }
 
