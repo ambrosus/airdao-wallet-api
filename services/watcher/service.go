@@ -42,7 +42,7 @@ type Service interface {
 	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
-	DeleteWatchersWithStaleData(ctx context.Context) error
+	UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error
 }
 
 type watchers struct {
@@ -719,6 +719,34 @@ func (s *service) DeleteWatchersWithStaleData(ctx context.Context) error {
 		}
 	}
 	s.mx.RUnlock()
+
+	return nil
+}
+
+func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error {
+	encodePushToken := base64.StdEncoding.EncodeToString([]byte(olpPushToken))
+
+	watcher, err := s.GetWatcher(ctx, olpPushToken)
+	if err != nil {
+		s.logger.Errorf("UpdateWatcherPushToken GetWatcher error %v\n", err)
+		return err
+	}
+	if watcher == nil {
+		s.logger.Errorf("UpdateWatcherPushToken watcher not found\n")
+		return err
+	}
+
+	watcher.SetPushToken(base64.StdEncoding.EncodeToString([]byte(newPushToken)))
+
+	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
+		s.logger.Errorf("UpdateWatcherPushToken repository.UpdateWatcher error %v\n", err)
+		return err
+	}
+
+	s.mx.Lock()
+	delete(s.cachedWatcher, encodePushToken)
+	s.cachedWatcher[watcher.PushToken] = watcher
+	s.mx.Unlock()
 
 	return nil
 }

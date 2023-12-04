@@ -145,3 +145,8 @@ func (w *Watcher) SetLastSuccessDate(date time.Time) {
 	w.LastSuccessDate = date
 	w.UpdatedAt = time.Now()
 }
+
+func (w *Watcher) SetPushToken(v string) {
+	w.PushToken = v
+	w.UpdatedAt = time.Now()
+}
