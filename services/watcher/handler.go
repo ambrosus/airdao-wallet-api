@@ -1,10 +1,10 @@
 package watcher
 
 import (
+	"github.com/gofiber/fiber/v2"
+	
 	"errors"
 	"net/url"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 type Handler struct {
