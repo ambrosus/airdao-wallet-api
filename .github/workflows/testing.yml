@@ -1,4 +1,4 @@
-name: Testing
+name: testing
 
 on:
   push:
@@ -24,25 +24,23 @@ jobs:
       - name: Build server
         run: make build
 
-  lint:
+  linter:
     runs-on: ubuntu-latest
     name: Run linter
+    needs:
+      - build
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install golangci-lint
-        run: |
-          curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b ./bin v1.42.1
-
       - name: Run linter
-        run: ./bin/golangci-lint run ./...
+        run: make lint
 
   test:
     runs-on: ubuntu-latest
     name: Run tests
     needs:
-      - build
+      - linter
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
