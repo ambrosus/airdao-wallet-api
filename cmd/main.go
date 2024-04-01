@@ -13,7 +13,6 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -123,23 +122,23 @@ func main() {
 	}
 
 	// Run DeleteWatchersWithStaleData on start for check and delete stale data
-	if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
-		zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
-	}
-
-	zapLogger.Info("Deleted watchers with stale data successfully")
-
-	// Run DeleteWatchersWithStaleData every 24 hours for check and delete stale data
-	go func() {
-		for {
-			err := watcherService.DeleteWatchersWithStaleData(context.Background())
-			if err != nil {
-				zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
-			}
-
-			time.Sleep(24 * time.Hour)
-		}
-	}()
+	//if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
+	//	zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
+	//}
+	//
+	//zapLogger.Info("Deleted watchers with stale data successfully")
+	//
+	//// Run DeleteWatchersWithStaleData every 24 hours for check and delete stale data
+	//go func() {
+	//	for {
+	//		err := watcherService.DeleteWatchersWithStaleData(context.Background())
+	//		if err != nil {
+	//			zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
+	//		}
+	//
+	//		time.Sleep(24 * time.Hour)
+	//	}
+	//}()
 
 	zapLogger.Info("Deleted watchers with stale data every 24 hours successfully")
 
