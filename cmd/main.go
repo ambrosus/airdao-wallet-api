@@ -7,6 +7,7 @@ import (
 	"airdao-mobile-api/pkg/logger"
 	"airdao-mobile-api/pkg/mongodb"
 	"airdao-mobile-api/services/health"
+	"airdao-mobile-api/services/migration"
 	"airdao-mobile-api/services/watcher"
 	"context"
 	"errors"
@@ -57,10 +58,10 @@ func main() {
 	}
 	zapLogger.Info("DB connected successfully")
 
-	//err = migration.RunMigrations(db, cfg.MongoDb.MongoDbName, zapLogger)
-	//if err != nil {
-	//	zapLogger.Fatalf("failed to run migration: %s", err)
-	//}
+	err = migration.RunMigrations(db, cfg.MongoDb.MongoDbName, zapLogger)
+	if err != nil {
+		zapLogger.Fatalf("failed to run migration: %s", err)
+	}
 
 	// Firebase
 	firebaseClient, err := firebase.NewClient(cfg.Firebase.CredPath)
@@ -68,14 +69,10 @@ func main() {
 		zapLogger.Fatalf("failed to create firebase messaging client - %v", err)
 	}
 
-	zapLogger.Info("Firebase client created successfully")
-
 	cloudMessagingClient, err := firebaseClient.CreateCloudMessagingClient()
 	if err != nil {
 		zapLogger.Fatalf("failed to create firebase cloud messaging client - %v", err)
 	}
-
-	zapLogger.Info("Firebase cloud messaging client created successfully")
 
 	// Firebase message
 	cloudMessagingService, err := cloudmessaging.NewCloudMessagingService(cloudMessagingClient, cfg.Firebase.AndroidChannelName)
@@ -83,15 +80,11 @@ func main() {
 		zapLogger.Fatalf("failed to create firebase message service - %v", err)
 	}
 
-	zapLogger.Info("Firebase message service created successfully")
-
 	// Repository
 	watcherRepository, err := watcher.NewRepository(db, cfg.MongoDb.MongoDbName, zapLogger)
 	if err != nil {
 		zapLogger.Fatalf("failed to create watcher repository - %v", err)
 	}
-
-	zapLogger.Info("Watcher repository created successfully")
 
 	// Services
 	watcherService, err := watcher.NewService(watcherRepository, cloudMessagingService, zapLogger, cfg.ExplorerApi, cfg.TokenPriceUrl, cfg.CallbackUrl, cfg.ExplorerToken)
@@ -99,13 +92,9 @@ func main() {
 		zapLogger.Fatalf("failed to create watcher service - %v", err)
 	}
 
-	zapLogger.Info("Watcher service created successfully")
-
 	if err := watcherService.Init(context.Background()); err != nil {
 		zapLogger.Fatalf("failed to init watchers - %v", err)
 	}
-
-	zapLogger.Info("Watcher service initialized successfully")
 
 	// Handlers
 	healthHandler := health.NewHandler()
@@ -114,8 +103,6 @@ func main() {
 	if err != nil {
 		zapLogger.Fatalf("failed to create watcher handler - %v", err)
 	}
-
-	zapLogger.Info("Watcher handler created successfully")
 
 	// Create config variable
 	config := fiber.Config{
@@ -126,8 +113,6 @@ func main() {
 	if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
 		zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
 	}
-
-	zapLogger.Info("Deleted watchers with stale data successfully")
 
 	// Run DeleteWatchersWithStaleData every 24 hours for check and delete stale data
 	go func() {
@@ -140,8 +125,6 @@ func main() {
 			time.Sleep(24 * time.Hour)
 		}
 	}()
-
-	zapLogger.Info("Deleted watchers with stale data every 24 hours successfully")
 
 	// Create fiber app
 	app := fiber.New(config)
@@ -170,7 +153,6 @@ func main() {
 		if err := app.Listen(":" + cfg.Port); err != nil {
 			zapLogger.Fatal(err)
 		}
-		zapLogger.Info("Server started on port %v", cfg.Port)
 	}()
 
 	zapLogger.Infoln("Server started on port %v", cfg.Port)
