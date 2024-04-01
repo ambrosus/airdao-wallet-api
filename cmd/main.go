@@ -7,7 +7,6 @@ import (
 	"airdao-mobile-api/pkg/logger"
 	"airdao-mobile-api/pkg/mongodb"
 	"airdao-mobile-api/services/health"
-	"airdao-mobile-api/services/migration"
 	"airdao-mobile-api/services/watcher"
 	"context"
 	"errors"
@@ -57,11 +56,6 @@ func main() {
 		zapLogger.Fatal(err)
 	}
 	zapLogger.Info("DB connected successfully")
-
-	err = migration.RunMigrations(db, cfg.MongoDb.MongoDbName, zapLogger)
-	if err != nil {
-		zapLogger.Fatalf("failed to run migration: %s", err)
-	}
 
 	// Firebase
 	firebaseClient, err := firebase.NewClient(cfg.Firebase.CredPath)
