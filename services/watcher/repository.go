@@ -226,18 +226,16 @@ func (r *repository) CreateWatcher(ctx context.Context, watcher *Watcher) error 
 	}
 
 	// add new history notifications to history notifications collection
-	if historicalNotifications != nil {
-		for _, historyNotification := range *historicalNotifications {
-			historyNotificationDocument := &HistoryNotificationDocument{
-				ID:           primitive.NewObjectID(),
-				WatcherID:    watcher.ID,
-				Notification: historyNotification,
-			}
-			_, err := r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).InsertOne(ctx, historyNotificationDocument)
-			if err != nil {
-				r.logger.Errorf("failed to insert history notification to db: %s", err)
-				return errors.New("failed to create history notification")
-			}
+	for _, historyNotification := range *historicalNotifications {
+		historyNotificationDocument := &HistoryNotificationDocument{
+			ID:           primitive.NewObjectID(),
+			WatcherID:    watcher.ID,
+			Notification: historyNotification,
+		}
+		_, err := r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).InsertOne(ctx, historyNotificationDocument)
+		if err != nil {
+			r.logger.Errorf("failed to insert history notification to db: %s", err)
+			return errors.New("failed to create history notification")
 		}
 	}
 
@@ -270,18 +268,16 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 	}
 
 	// add updated history notifications to history notifications collection
-	if historicalNotifications != nil {
-		for _, historyNotification := range *historicalNotifications {
-			historyNotificationDocument := &HistoryNotificationDocument{
-				ID:           primitive.NewObjectID(),
-				WatcherID:    watcher.ID,
-				Notification: historyNotification,
-			}
-			_, err := r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).InsertOne(ctx, historyNotificationDocument)
-			if err != nil {
-				r.logger.Errorf("failed to insert history notification to db: %s", err)
-				return errors.New("failed to create history notification")
-			}
+	for _, historyNotification := range *historicalNotifications {
+		historyNotificationDocument := &HistoryNotificationDocument{
+			ID:           primitive.NewObjectID(),
+			WatcherID:    watcher.ID,
+			Notification: historyNotification,
+		}
+		_, err := r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).InsertOne(ctx, historyNotificationDocument)
+		if err != nil {
+			r.logger.Errorf("failed to insert history notification to db: %s", err)
+			return errors.New("failed to create history notification")
 		}
 	}
 

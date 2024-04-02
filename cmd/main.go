@@ -109,25 +109,20 @@ func main() {
 		ServerHeader: "AIRDAO-Mobile-Api", // add custom server header
 	}
 
-	zapLogger.Info("Deleting watchers with stale data...")
-
 	// Run DeleteWatchersWithStaleData on start for check and delete stale data
 	if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
 		zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
 	}
 
-	zapLogger.Info("Deleted watchers with stale data successfully")
-
 	// Run DeleteWatchersWithStaleData every 24 hours for check and delete stale data
 	go func() {
 		for {
-			time.Sleep(24 * time.Hour)
-
 			err := watcherService.DeleteWatchersWithStaleData(context.Background())
 			if err != nil {
 				zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
 			}
-			zapLogger.Info("Deleted watchers with stale data successfully")
+
+			time.Sleep(24 * time.Hour)
 		}
 	}()
 
@@ -160,7 +155,7 @@ func main() {
 		}
 	}()
 
-	zapLogger.Infoln("Server started on port", cfg.Port)
+	zapLogger.Infoln("Server started on port %v", cfg.Port)
 
 	// Create a context that will be used to gracefully shut down the server
 	ctx, cancel = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
