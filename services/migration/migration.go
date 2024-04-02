@@ -53,14 +53,11 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 
 	indexModel := mongo.IndexModel{
 		Keys: bson.D{
-			{Key: "watcher_id", Value: 1},
-			{Key: "notification.timestamp", Value: -1},
+			{"watcher_id", 1},
+			{"notification.timestamp", -1},
 		},
 	}
 	_, err := historyCollection.Indexes().CreateOne(context.Background(), indexModel)
-	if err != nil {
-		return err
-	}
 
 	cursor, err := watcherCollection.Find(context.Background(), bson.M{})
 	if err != nil {
