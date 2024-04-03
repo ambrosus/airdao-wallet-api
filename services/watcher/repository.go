@@ -240,6 +240,8 @@ func (r *repository) CreateWatcher(ctx context.Context, watcher *Watcher) error 
 			}
 		}
 	}
+	// restore historical notifications to watcher
+	watcher.HistoricalNotifications = historicalNotifications
 
 	return nil
 }
@@ -284,6 +286,8 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 			}
 		}
 	}
+	// restore historical notifications to watcher
+	watcher.HistoricalNotifications = historicalNotifications
 
 	return nil
 }

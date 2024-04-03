@@ -119,7 +119,7 @@ func (w *Watcher) AddNotification(title, body string, sent bool, timestamp time.
 			Timestamp: timestamp,
 		}}
 	} else {
-		*w.HistoricalNotifications = append((*w.HistoricalNotifications), &HistoryNotification{
+		*w.HistoricalNotifications = append(*w.HistoricalNotifications, &HistoryNotification{
 			Title: title, Body: body, Sent: sent, Timestamp: timestamp,
 		})
 	}
