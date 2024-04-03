@@ -96,6 +96,7 @@ func (suite *WatcherTestSuite) TestReadWatcher() {
 	suite.Require().NoError(err)
 	bsonResultWatcherString := string(bsonResultWatcher)
 	bsonWatcher, err := bson.Marshal(watcher)
+	suite.Require().NoError(err)
 	bsonWatcherString := string(bsonWatcher)
 	suite.Require().Equal(bsonWatcherString, bsonResultWatcherString)
 }
@@ -112,6 +113,7 @@ func (suite *WatcherTestSuite) TestUpdateWatcher() {
 
 	ctx := context.Background()
 	err = suite.watcherRepository.CreateWatcher(ctx, watcher)
+	suite.Require().NoError(err)
 
 	// Update the watcher
 	newPushToken := "newTestPushToken"
@@ -133,6 +135,7 @@ func (suite *WatcherTestSuite) TestUpdateWatcher() {
 	suite.Require().NoError(err)
 	bsonResultWatcherString := string(bsonResultWatcher)
 	bsonWatcher, err := bson.Marshal(watcher)
+	suite.Require().NoError(err)
 	bsonWatcherString := string(bsonWatcher)
 	suite.Require().Equal(bsonWatcherString, bsonResultWatcherString)
 }
@@ -202,6 +205,7 @@ func (suite *WatcherTestSuite) TestWatcherWithHistoricalNotifications() {
 	suite.Require().NoError(err)
 	bsonResultWatcherString := string(bsonResultWatcher)
 	bsonWatcher, err := bson.Marshal(watcher)
+	suite.Require().NoError(err)
 	bsonWatcherString := string(bsonWatcher)
 	suite.Require().Equal(bsonWatcherString, bsonResultWatcherString)
 }
@@ -258,6 +262,7 @@ func (suite *WatcherTestSuite) TestWatcherWithAddressAndNotifications() {
 	suite.Require().NoError(err)
 	bsonResultWatcherString := string(bsonResultWatcher)
 	bsonWatcher, err := bson.Marshal(watcher)
+	suite.Require().NoError(err)
 	bsonWatcherString := string(bsonWatcher)
 	suite.Require().Equal(bsonWatcherString, bsonResultWatcherString)
 
