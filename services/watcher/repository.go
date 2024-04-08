@@ -167,6 +167,7 @@ func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
 	for _, watcher := range watchers {
 		r.logger.Info("checking watcher")
 		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
+			fmt.Printf("Delete watcher  with ID %s  \n", watcher.ID.Hex())
 			filter := bson.M{"_id": watcher.ID}
 			if err := r.DeleteWatcher(ctx, filter); err != nil {
 				return err
@@ -303,6 +304,7 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 // based on the provided filters. It retrieves the watcher using the filters and then uses its ID
 // to delete both the watcher and its associated history notifications.
 func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
+	r.logger.Info("start watcher  delete")
 	watcher, err := r.GetWatcher(ctx, filters)
 	if err != nil {
 		r.logger.Errorf("unable to get watcher: %v", err)
