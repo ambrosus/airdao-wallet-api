@@ -5,7 +5,7 @@ on:
     branches:
       - master
       - dev
-
+      - add-debug-logs
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: airdao_wallet_api
