@@ -68,11 +68,12 @@ func (r *repository) GetWatcher(ctx context.Context, filters bson.M) (*Watcher, 
 		r.logger.Errorf("unable to find watcher due to internal error: %v", err)
 		return nil, err
 	}
-
+	r.logger.Info("got watcher")
 	if err := r.attachHistory(ctx, &watcher); err != nil {
 		r.logger.Errorf("unable to fetch and set history notifications: %v", err)
 		return nil, err
 	}
+	r.logger.Info("got watcher history data")
 
 	return &watcher, nil
 }
@@ -87,6 +88,8 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 		r.logger.Errorf("unable to find watcher due to internal error: %v", err)
 		return nil, nil
 	}
+
+	r.logger.Info("got all watchers")
 
 	defer cursor.Close(ctx)
 
@@ -105,6 +108,8 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 
 		watchers = append(watchers, watcher)
 	}
+
+	r.logger.Info("got all watchers history data")
 
 	if err := cursor.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)
@@ -141,6 +146,7 @@ func (r *repository) attachHistory(ctx context.Context, watcher *Watcher) error 
 
 		historyNotifications = append(historyNotifications, historyNotificationDocument.Notification)
 	}
+	r.logger.Info("got history notifications")
 
 	if err := cursor.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)
@@ -158,8 +164,12 @@ func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
 		return err
 	}
 
+	r.logger.Info("got all watchers")
+
 	for _, watcher := range watchers {
+		r.logger.Info("checking watcher")
 		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
+			fmt.Printf("Delete watcher  with ID %s  \n", watcher.ID.Hex())
 			filter := bson.M{"_id": watcher.ID}
 			if err := r.DeleteWatcher(ctx, filter); err != nil {
 				return err
@@ -296,11 +306,14 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 // based on the provided filters. It retrieves the watcher using the filters and then uses its ID
 // to delete both the watcher and its associated history notifications.
 func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
+	r.logger.Info("start watcher  delete")
 	watcher, err := r.GetWatcher(ctx, filters)
 	if err != nil {
 		r.logger.Errorf("unable to get watcher: %v", err)
 		return err
 	}
+
+	r.logger.Info("got watcher to delete")
 
 	if watcher == nil {
 		r.logger.Errorf("watcher not found")
@@ -313,11 +326,15 @@ func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
 		return err
 	}
 
+	r.logger.Info("deleted watcher")
+
 	_, err = r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).DeleteMany(ctx, bson.M{"watcher_id": watcher.ID})
 	if err != nil {
 		r.logger.Errorf("failed to delete history notifications: %v", err)
 		return err
 	}
+
+	r.logger.Info("deleted history notifications")
 
 	return nil
 }
