@@ -68,11 +68,12 @@ func (r *repository) GetWatcher(ctx context.Context, filters bson.M) (*Watcher, 
 		r.logger.Errorf("unable to find watcher due to internal error: %v", err)
 		return nil, err
 	}
-
+	r.logger.Info("got watcher")
 	if err := r.attachHistory(ctx, &watcher); err != nil {
 		r.logger.Errorf("unable to fetch and set history notifications: %v", err)
 		return nil, err
 	}
+	r.logger.Info("got watcher history data")
 
 	return &watcher, nil
 }
@@ -145,6 +146,7 @@ func (r *repository) attachHistory(ctx context.Context, watcher *Watcher) error 
 
 		historyNotifications = append(historyNotifications, historyNotificationDocument.Notification)
 	}
+	r.logger.Info("got history notifications")
 
 	if err := cursor.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)
