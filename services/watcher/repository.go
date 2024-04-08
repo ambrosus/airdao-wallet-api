@@ -88,6 +88,8 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 		return nil, nil
 	}
 
+	r.logger.Info("got all watchers")
+
 	defer cursor.Close(ctx)
 
 	var watchers []*Watcher
@@ -105,6 +107,8 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 
 		watchers = append(watchers, watcher)
 	}
+
+	r.logger.Info("got all watchers history data")
 
 	if err := cursor.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)
@@ -158,7 +162,10 @@ func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
 		return err
 	}
 
+	r.logger.Info("got all watchers")
+
 	for _, watcher := range watchers {
+		r.logger.Info("checking watcher")
 		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
 			filter := bson.M{"_id": watcher.ID}
 			if err := r.DeleteWatcher(ctx, filter); err != nil {
@@ -302,6 +309,8 @@ func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
 		return err
 	}
 
+	r.logger.Info("got watcher to delete")
+
 	if watcher == nil {
 		r.logger.Errorf("watcher not found")
 		return errors.New("watcher not found")
@@ -313,11 +322,15 @@ func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
 		return err
 	}
 
+	r.logger.Info("deleted watcher")
+
 	_, err = r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).DeleteMany(ctx, bson.M{"watcher_id": watcher.ID})
 	if err != nil {
 		r.logger.Errorf("failed to delete history notifications: %v", err)
 		return err
 	}
+
+	r.logger.Info("deleted history notifications")
 
 	return nil
 }

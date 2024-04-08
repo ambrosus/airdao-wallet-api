@@ -22,6 +22,17 @@ type WatcherTestSuite struct {
 	watcherRepository Repository
 }
 
+func NewLogger() *zap.SugaredLogger {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		// If error occurs during logger initialization, panic with the error
+		panic(err)
+	}
+
+	// Convert the logger to SugaredLogger for structured, leveled logging
+	return logger.Sugar()
+}
+
 func (suite *WatcherTestSuite) SetupSuite() {
 	pool, err := dockertest.NewPool("")
 	suite.Require().NoError(err)
@@ -45,9 +56,7 @@ func (suite *WatcherTestSuite) SetupSuite() {
 
 	suite.client = db
 
-	logger := zap.Logger{}
-	sugaredLog := logger.Sugar()
-	watcherRepository, err := NewRepository(suite.client, "test", sugaredLog)
+	watcherRepository, err := NewRepository(suite.client, "test", NewLogger())
 	suite.Require().NoError(err)
 	suite.watcherRepository = watcherRepository
 }

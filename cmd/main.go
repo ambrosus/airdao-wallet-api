@@ -92,6 +92,15 @@ func main() {
 		zapLogger.Fatalf("failed to create watcher service - %v", err)
 	}
 
+	zapLogger.Info("Deleting watchers with stale data...")
+
+	// Run DeleteWatchersWithStaleData on start for check and delete stale data
+	if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
+		zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
+	}
+
+	zapLogger.Info("Deleted watchers with stale data successfully")
+
 	if err := watcherService.Init(context.Background()); err != nil {
 		zapLogger.Fatalf("failed to init watchers - %v", err)
 	}
@@ -108,15 +117,6 @@ func main() {
 	config := fiber.Config{
 		ServerHeader: "AIRDAO-Mobile-Api", // add custom server header
 	}
-
-	zapLogger.Info("Deleting watchers with stale data...")
-
-	// Run DeleteWatchersWithStaleData on start for check and delete stale data
-	if err := watcherService.DeleteWatchersWithStaleData(context.Background()); err != nil {
-		zapLogger.Errorf("failed to delete watchers with stale data - %v", err)
-	}
-
-	zapLogger.Info("Deleted watchers with stale data successfully")
 
 	// Run DeleteWatchersWithStaleData every 24 hours for check and delete stale data
 	go func() {
@@ -153,11 +153,13 @@ func main() {
 		return c.Status(fiber.StatusNotFound).JSON(map[string]string{"error": "page not found"})
 	})
 
+	zapLogger.Infoln("Server will start on port", cfg.Port)
 	// Start the server
 	go func() {
 		if err := app.Listen(":" + cfg.Port); err != nil {
 			zapLogger.Fatal(err)
 		}
+		zapLogger.Infoln("Server started on port", cfg.Port)
 	}()
 
 	zapLogger.Infoln("Server started on port", cfg.Port)
