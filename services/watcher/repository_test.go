@@ -244,6 +244,8 @@ func (suite *WatcherTestSuite) TestWatcherWithAddressAndNotifications() {
 	threshold := 10.0
 	txNotification := "on"
 	priceNotification := "on"
+	watcher.SetPushToken("testPushToken2")
+	watcher.DeleteAddress("0x1234567890")
 	watcher.SetThreshold(threshold)
 	watcher.SetTxNotification(txNotification)
 	watcher.SetPriceNotification(priceNotification)
@@ -261,7 +263,7 @@ func (suite *WatcherTestSuite) TestWatcherWithAddressAndNotifications() {
 	suite.Require().NotNil(resultWatcher)
 
 	// Verify the addresses
-	suite.Require().Equal(2, len(*resultWatcher.Addresses))
+	suite.Require().Equal(1, len(*resultWatcher.Addresses))
 
 	// Verify the notifications
 	suite.Require().Equal(2, len(*resultWatcher.HistoricalNotifications))
@@ -274,7 +276,34 @@ func (suite *WatcherTestSuite) TestWatcherWithAddressAndNotifications() {
 	suite.Require().NoError(err)
 	bsonWatcherString := string(bsonWatcher)
 	suite.Require().Equal(bsonWatcherString, bsonResultWatcherString)
+}
 
+func (suite *WatcherTestSuite) TestWatcherGetList() {
+	all, err := suite.watcherRepository.GetAllWatchers(context.Background())
+	suite.Require().NoError(err)
+	suite.Require().NotNil(all)
+
+	for _, w := range all {
+		err = suite.watcherRepository.DeleteWatcher(context.Background(), bson.M{"_id": w.ID})
+		suite.Require().NoError(err)
+	}
+
+	pushToken := "testPushToken"
+	watcher1, err := NewWatcher(pushToken)
+	suite.Require().NoError(err)
+	err = suite.watcherRepository.CreateWatcher(context.Background(), watcher1)
+	suite.Require().NoError(err)
+
+	pushToken = "testPushToken2"
+	watcher2, err := NewWatcher(pushToken)
+	suite.Require().NoError(err)
+	err = suite.watcherRepository.CreateWatcher(context.Background(), watcher2)
+	suite.Require().NoError(err)
+
+	all, err = suite.watcherRepository.GetWatcherList(context.Background(), bson.M{}, 1)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(all)
+	suite.Require().Equal(2, len(all))
 }
 
 func TestWatcherSuite(t *testing.T) {

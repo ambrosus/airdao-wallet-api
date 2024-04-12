@@ -3,7 +3,7 @@ package watcher
 import (
 	"context"
 	"errors"
-	"fmt"
+	"runtime"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -57,6 +57,7 @@ func NewRepository(db *mongo.Client, dbName string, logger *zap.SugaredLogger) (
 }
 
 func (r *repository) GetWatcher(ctx context.Context, filters bson.M) (*Watcher, error) {
+	r.logger.Info("GetWatcher is called")
 	var watcher Watcher
 	if err := r.db.Database(r.dbName).Collection(r.watchersCollectionName).FindOne(ctx, filters).Decode(&watcher); err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -68,17 +69,23 @@ func (r *repository) GetWatcher(ctx context.Context, filters bson.M) (*Watcher, 
 		r.logger.Errorf("unable to find watcher due to internal error: %v", err)
 		return nil, err
 	}
-	r.logger.Info("got watcher")
+	r.logger.Info(" GetWatcher got watcher, now fetching history data")
 	if err := r.attachHistory(ctx, &watcher); err != nil {
 		r.logger.Errorf("unable to fetch and set history notifications: %v", err)
 		return nil, err
 	}
-	r.logger.Info("got watcher history data")
+	r.logger.Info("GetWatcher got watcher history data")
 
 	return &watcher, nil
 }
 
 func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
+	r.logger.Info("GetAllWatchers is called")
+	var stats runtime.MemStats
+	runtime.ReadMemStats(&stats)
+	r.logger.Infof("Allocated memory before getAll: %d MB", stats.Alloc/1024/1024)
+	//time.Sleep(time.Second)
+
 	collection := r.db.Database(r.dbName).Collection(r.watchersCollectionName)
 
 	filter := bson.D{{}}
@@ -89,7 +96,7 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 		return nil, nil
 	}
 
-	r.logger.Info("got all watchers")
+	r.logger.Info("GetAllWatchers got all watchers")
 
 	defer cursor.Close(ctx)
 
@@ -109,7 +116,11 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 		watchers = append(watchers, watcher)
 	}
 
-	r.logger.Info("got all watchers history data")
+	r.logger.Info("GetAllWatchers got all watchers history data")
+
+	var stats2 runtime.MemStats
+	runtime.ReadMemStats(&stats2)
+	r.logger.Infof("Allocated memory after getAll: %d MB", stats2.Alloc/1024/1024)
 
 	if err := cursor.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)
@@ -121,6 +132,7 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 
 // Fetches and assigns historical notifications to the watcher.
 func (r *repository) attachHistory(ctx context.Context, watcher *Watcher) error {
+	r.logger.Info("attachHistory is called")
 	historyNotifications := make([]*HistoryNotification, 0)
 
 	sortField := bson.E{
@@ -146,14 +158,16 @@ func (r *repository) attachHistory(ctx context.Context, watcher *Watcher) error 
 
 		historyNotifications = append(historyNotifications, historyNotificationDocument.Notification)
 	}
-	r.logger.Info("got history notifications")
+	r.logger.Info("attachHistory got history notifications")
 
 	if err := cursor.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)
 		return err
 	}
 
-	watcher.HistoricalNotifications = &historyNotifications
+	if len(historyNotifications) > 0 {
+		watcher.HistoricalNotifications = &historyNotifications
+	}
 
 	return nil
 }
@@ -169,12 +183,12 @@ func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
 	for _, watcher := range watchers {
 		r.logger.Info("checking watcher")
 		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
-			fmt.Printf("Delete watcher  with ID %s  \n", watcher.ID.Hex())
+			r.logger.Info("Delete watcher  with ID %s  \n", watcher.ID.Hex())
 			filter := bson.M{"_id": watcher.ID}
 			if err := r.DeleteWatcher(ctx, filter); err != nil {
 				return err
 			}
-			fmt.Printf("Watcher with ID %s deleted due to stale data\n", watcher.ID.Hex())
+			r.logger.Info("Watcher with ID %s deleted due to stale data\n", watcher.ID.Hex())
 		}
 	}
 
@@ -182,6 +196,7 @@ func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
 }
 
 func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page int) ([]*Watcher, error) {
+	r.logger.Info("GetWatcherList is called")
 	pageSize := 100
 
 	skip := (page - 1) * pageSize
@@ -195,6 +210,7 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 	}
 	defer cur.Close(ctx)
 
+	r.logger.Info("GetWatcherList got all watchers, now fetching history data")
 	var watchers []*Watcher
 	for cur.Next(ctx) {
 		watcher := new(Watcher)
@@ -220,11 +236,11 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 }
 
 func (r *repository) CreateWatcher(ctx context.Context, watcher *Watcher) error {
-	// don't write historical notifications to watcher collection, set it to history notifications collection
+	r.logger.Info("CreateWatcher is called")
 	historicalNotifications := watcher.HistoricalNotifications
-	watcher.HistoricalNotifications = nil
 
-	_, err := r.db.Database(r.dbName).Collection(r.watchersCollectionName).InsertOne(ctx, watcher)
+	// don't write historical notifications to watcher collection, set it to history notifications collection
+	_, err := r.db.Database(r.dbName).Collection(r.watchersCollectionName).InsertOne(ctx, copyWatcherWithoutHistory(watcher))
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			r.logger.Errorf("failed to insert watcher to db due duplicate error: %s", err)
@@ -234,6 +250,8 @@ func (r *repository) CreateWatcher(ctx context.Context, watcher *Watcher) error 
 		r.logger.Errorf("failed to insert watcher to db: %s", err)
 		return errors.New("failed to create watcher")
 	}
+
+	r.logger.Info(" CreateWatcher created watcher, now inserting history data")
 
 	// add new history notifications to history notifications collection
 	if historicalNotifications != nil {
@@ -250,19 +268,36 @@ func (r *repository) CreateWatcher(ctx context.Context, watcher *Watcher) error 
 			}
 		}
 	}
-	// restore historical notifications to watcher
-	watcher.HistoricalNotifications = historicalNotifications
+
+	r.logger.Info("CreateWatcher inserted history data")
 
 	return nil
 }
 
+func copyWatcherWithoutHistory(watcher *Watcher) *Watcher {
+	return &Watcher{
+		ID:                      watcher.ID,
+		PushToken:               watcher.PushToken,
+		Threshold:               watcher.Threshold,
+		TokenPrice:              watcher.TokenPrice,
+		TxNotification:          watcher.TxNotification,
+		PriceNotification:       watcher.PriceNotification,
+		Addresses:               watcher.Addresses,
+		LastSuccessDate:         watcher.LastSuccessDate,
+		LastFailDate:            watcher.LastFailDate,
+		CreatedAt:               watcher.CreatedAt,
+		UpdatedAt:               watcher.UpdatedAt,
+		HistoricalNotifications: nil,
+	}
+}
+
 func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error {
 	historicalNotifications := watcher.HistoricalNotifications
-	watcher.HistoricalNotifications = nil
+	r.logger.Info("UpdateWatcher is called")
 
 	_, err := r.db.Database(r.dbName).Collection(r.watchersCollectionName).UpdateOne(ctx,
 		bson.M{"_id": watcher.ID},
-		bson.M{"$set": watcher})
+		bson.M{"$set": copyWatcherWithoutHistory(watcher)})
 
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
@@ -274,12 +309,16 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 		return errors.New("failed to update watcher")
 	}
 
+	r.logger.Info("UpdateWatcher updated watcher, now updating history data")
+
 	// delete all history notifications for this watcher and add historicalNotifications to history notifications collection
 	_, err = r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).DeleteMany(ctx, bson.M{"watcher_id": watcher.ID})
 	if err != nil {
 		r.logger.Errorf("failed to delete history notifications: %v", err)
 		return err
 	}
+
+	r.logger.Info("UpdateWatcher deleted history notifications")
 
 	// add updated history notifications to history notifications collection
 	if historicalNotifications != nil {
@@ -296,8 +335,8 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 			}
 		}
 	}
-	// restore historical notifications to watcher
-	watcher.HistoricalNotifications = historicalNotifications
+
+	r.logger.Info("UpdateWatcher inserted history data")
 
 	return nil
 }
@@ -306,14 +345,14 @@ func (r *repository) UpdateWatcher(ctx context.Context, watcher *Watcher) error 
 // based on the provided filters. It retrieves the watcher using the filters and then uses its ID
 // to delete both the watcher and its associated history notifications.
 func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
-	r.logger.Info("start watcher  delete")
+	r.logger.Info("DeleteWatcher is called")
 	watcher, err := r.GetWatcher(ctx, filters)
 	if err != nil {
 		r.logger.Errorf("unable to get watcher: %v", err)
 		return err
 	}
 
-	r.logger.Info("got watcher to delete")
+	r.logger.Info("DeleteWatcher got watcher to delete")
 
 	if watcher == nil {
 		r.logger.Errorf("watcher not found")
@@ -326,7 +365,7 @@ func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
 		return err
 	}
 
-	r.logger.Info("deleted watcher")
+	r.logger.Info("DeleteWatcher deleted watcher")
 
 	_, err = r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).DeleteMany(ctx, bson.M{"watcher_id": watcher.ID})
 	if err != nil {
@@ -334,7 +373,7 @@ func (r *repository) DeleteWatcher(ctx context.Context, filters bson.M) error {
 		return err
 	}
 
-	r.logger.Info("deleted history notifications")
+	r.logger.Info("DeleteWatcher deleted history notifications")
 
 	return nil
 }
