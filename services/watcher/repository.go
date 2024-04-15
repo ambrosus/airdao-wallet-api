@@ -175,23 +175,30 @@ func (r *repository) attachHistory(ctx context.Context, watcher *Watcher) error 
 }
 
 func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
-	watchers, err := r.GetAllWatchers(context.Background())
-	if err != nil {
-		return err
-	}
-
-	r.logger.Info("got all watchers")
-
-	for _, watcher := range watchers {
-		r.logger.Info("checking watcher")
-		if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
-			r.logger.Info("Delete watcher  with ID %s  \n", watcher.ID.Hex())
-			filter := bson.M{"_id": watcher.ID}
-			if err := r.DeleteWatcher(ctx, filter); err != nil {
-				return err
-			}
-			r.logger.Info("Watcher with ID %s deleted due to stale data\n", watcher.ID.Hex())
+	page := 1
+	for {
+		watchers, err := r.GetWatcherList(ctx, bson.M{}, page)
+		if err != nil {
+			return err
 		}
+
+		if len(watchers) == 0 {
+			break
+		}
+
+		for _, watcher := range watchers {
+			r.logger.Info("checking watcher")
+			if watcher.LastFailDate.Before(watcher.LastSuccessDate.Add(-7 * 24 * time.Hour)) {
+				r.logger.Info("Delete watcher  with ID %s  \n", watcher.ID.Hex())
+				filter := bson.M{"_id": watcher.ID}
+				if err := r.DeleteWatcher(ctx, filter); err != nil {
+					return err
+				}
+				r.logger.Info("Watcher with ID %s deleted due to stale data\n", watcher.ID.Hex())
+			}
+		}
+
+		page++
 	}
 
 	return nil
