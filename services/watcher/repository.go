@@ -107,24 +107,26 @@ func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
 			r.logger.Errorf("Unable to decode watcher document: %v", err)
 			return nil, nil
 		}
+		watchers = append(watchers, watcher)
+	}
 
+	// Check for any errors that occurred during iteration
+	if err := cursor.Err(); err != nil {
+		r.logger.Errorf("cursor iteration error: %v", err)
+		return nil, nil
+	}
+
+	// attach notifications history to each watcher
+	for _, watcher := range watchers {
 		if err := r.attachHistory(ctx, watcher); err != nil {
 			r.logger.Errorf("unable to fetch and set history notifications: %v", err)
 			return nil, nil
 		}
+		r.logger.Info("GetAllWatchers got all watchers history data")
 
-		watchers = append(watchers, watcher)
-	}
-
-	r.logger.Info("GetAllWatchers got all watchers history data")
-
-	var stats2 runtime.MemStats
-	runtime.ReadMemStats(&stats2)
-	r.logger.Infof("Allocated memory after getAll: %d MB", stats2.Alloc/1024/1024)
-
-	if err := cursor.Err(); err != nil {
-		r.logger.Errorf("cursor iteration error: %v", err)
-		return nil, nil
+		var stats2 runtime.MemStats
+		runtime.ReadMemStats(&stats2)
+		r.logger.Infof("Allocated memory while attachHistory getAll: %d MB", stats2.Alloc/1024/1024)
 	}
 
 	return watchers, nil
@@ -219,10 +221,6 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 			return nil, err
 		}
 
-		if err := r.attachHistory(ctx, watcher); err != nil {
-			r.logger.Errorf("unable to fetch and set history notifications: %v", err)
-			return nil, err
-		}
 		watchers = append(watchers, watcher)
 	}
 
@@ -230,6 +228,15 @@ func (r *repository) GetWatcherList(ctx context.Context, filters bson.M, page in
 	if err := cur.Err(); err != nil {
 		r.logger.Errorf("cursor iteration error: %v", err)
 		return nil, err
+	}
+
+	// attach notifications history to each watcher
+	for _, watcher := range watchers {
+		if err := r.attachHistory(ctx, watcher); err != nil {
+			r.logger.Errorf("unable to fetch and set history notifications: %v", err)
+			return nil, err
+		}
+		r.logger.Info("GetWatcherList got all watchers history data")
 	}
 
 	return watchers, nil
