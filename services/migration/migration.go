@@ -49,15 +49,24 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 		return nil
 	}
 
-	// Create index { watcher_id: 1, notification.timestamp: -1 }
-
 	indexModel := mongo.IndexModel{
 		Keys: bson.D{
 			{Key: "watcher_id", Value: 1},
-			{Key: "notification.timestamp", Value: -1},
+			{Key: "timestamp", Value: -1},
 		},
 	}
 	_, err := historyCollection.Indexes().CreateOne(context.Background(), indexModel)
+	if err != nil {
+		return err
+	}
+
+	pushTokenIndex := mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "push_token", Value: 1},
+		},
+	}
+
+	_, err = watcherCollection.Indexes().CreateOne(context.Background(), pushTokenIndex)
 	if err != nil {
 		return err
 	}
@@ -81,10 +90,9 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 
 			// Iterate over historical notifications only if it's not nil
 			for _, notification := range *watcher.HistoricalNotifications {
-				_, err := historyCollection.InsertOne(context.Background(), &HistoryNotificationDocument{
-					WatcherID:    watcher.ID,
-					Notification: notification,
-				})
+				notification.ID = primitive.NewObjectID()
+				notification.WatcherID = watcher.ID
+				_, err := historyCollection.InsertOne(context.Background(), notification)
 				if err != nil {
 					return err
 				}
