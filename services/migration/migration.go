@@ -3,6 +3,7 @@ package migration
 import (
 	"airdao-mobile-api/services/watcher"
 	"errors"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
@@ -79,19 +80,19 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 	defer cursor.Close(context.Background())
 
 	for cursor.Next(context.Background()) {
-		var watcher watcher.Watcher
-		if err := cursor.Decode(&watcher); err != nil {
+		var w watcher.Watcher
+		if err := cursor.Decode(&w); err != nil {
 			return err
 		}
 
 		// Check if historical_notifications field is nil
-		if watcher.HistoricalNotifications != nil {
-			logger.Info("Migrating historical notifications...", watcher.ID)
+		if w.HistoricalNotifications != nil {
+			logger.Info("Migrating historical notifications...", w.ID)
 
 			// Iterate over historical notifications only if it's not nil
-			for _, notification := range *watcher.HistoricalNotifications {
+			for _, notification := range *w.HistoricalNotifications {
 				notification.ID = primitive.NewObjectID()
-				notification.WatcherID = watcher.ID
+				notification.WatcherID = w.ID
 				_, err := historyCollection.InsertOne(context.Background(), notification)
 				if err != nil {
 					return err
@@ -101,7 +102,7 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 			// Update watcher to set historical_notifications to nil
 			_, err := watcherCollection.UpdateOne(
 				context.Background(),
-				bson.M{"_id": watcher.ID},
+				bson.M{"_id": w.ID},
 				bson.M{"$set": bson.M{"historical_notifications": nil}},
 			)
 			if err != nil {
@@ -109,9 +110,8 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 			}
 		} else {
 			// Log a message or handle the case when historical_notifications is nil
-			logger.Info("No historical notifications found for watcher:", watcher.ID)
+			logger.Info("No historical notifications found for watcher:", w.ID)
 		}
-
 	}
 
 	if err := cursor.Err(); err != nil {
@@ -128,5 +128,9 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 	if err != nil {
 		return err
 	}
+
+	// Pause execution for index to be fully formed
+	time.Sleep(5 * time.Second)
+
 	return nil
 }

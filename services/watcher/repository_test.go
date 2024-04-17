@@ -168,7 +168,7 @@ func (suite *WatcherTestSuite) TestDeleteWatcher() {
 	suite.Require().NoError(err)
 
 	// Read all watchers
-	watchers, err := suite.watcherRepository.GetAllWatchers(ctx)
+	watchers, err := suite.watcherRepository.GetWatcherList(ctx, bson.M{}, 1)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(watchers)
 	// Verify that the watcher has been deleted find the watcher by ID
@@ -279,7 +279,7 @@ func (suite *WatcherTestSuite) TestWatcherWithAddressAndNotifications() {
 }
 
 func (suite *WatcherTestSuite) TestWatcherGetList() {
-	all, err := suite.watcherRepository.GetAllWatchers(context.Background())
+	all, err := suite.watcherRepository.GetWatcherList(context.Background(), bson.M{}, 1)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(all)
 

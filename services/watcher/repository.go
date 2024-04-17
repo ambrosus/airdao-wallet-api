@@ -17,7 +17,6 @@ const CollectionName = "watcher"
 //go:generate mockgen -source=repository.go -destination=mocks/repository_mock.go
 type Repository interface {
 	GetWatcher(ctx context.Context, filters bson.M) (*Watcher, error)
-	GetAllWatchers(ctx context.Context) ([]*Watcher, error)
 	GetWatcherList(ctx context.Context, filters bson.M, page int) ([]*Watcher, error)
 
 	CreateWatcher(ctx context.Context, watcher *Watcher) error
@@ -72,29 +71,34 @@ func (r *repository) GetWatcher(ctx context.Context, filters bson.M) (*Watcher, 
 	return &watcher, nil
 }
 
-func (r *repository) GetAllWatchers(ctx context.Context) ([]*Watcher, error) {
-	page := 1
-	watchers := make([]*Watcher, 0)
-	for {
-		watchersPage, err := r.GetWatcherList(ctx, bson.M{}, page)
-		if err != nil {
-			r.logger.Errorf("unable to get GetAllWatchers watchers: %v page %v", err, page)
-			return nil, err
-		}
-		if len(watchersPage) == 0 {
-			break
-		}
+func (r *repository) getAllWatchersWithoutHistory(ctx context.Context) ([]*Watcher, error) {
+	r.logger.Info("GetAllWatchersWithoutHistory is called")
 
-		watchers = append(watchers, watchersPage...)
-		page++
+	collection := r.db.Database(r.dbName).Collection(r.watchersCollectionName)
+
+	cur, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		r.logger.Errorf("unable to find watchers due to internal error: %v", err)
+		return nil, err
 	}
+
+	defer cur.Close(ctx)
+
+	var watchers []*Watcher
+
+	if err := cur.All(ctx, &watchers); err != nil {
+		r.logger.Errorf("unable to decode watchers: %v", err)
+		return nil, err
+	}
+
+	r.logger.Info("GetAllWatchersWithoutHistory got watchers")
 
 	return watchers, nil
 }
 
 func (r *repository) DeleteWatchersWithStaleData(ctx context.Context) error {
 	r.logger.Info("DeleteWatchersWithStaleData is called")
-	watchers, err := r.GetAllWatchers(ctx)
+	watchers, err := r.getAllWatchersWithoutHistory(ctx)
 	if err != nil {
 		r.logger.Errorf("unable to get all watchers: %v", err)
 	}
