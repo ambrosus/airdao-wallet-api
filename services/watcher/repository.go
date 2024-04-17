@@ -161,8 +161,10 @@ func (r *repository) attachHistory(ctx context.Context, watcher *Watcher) error 
 		Value: -1,
 	}
 	sortCriteria := bson.D{sortField}
+	opts := options.Find().SetSort(sortCriteria).SetLimit(10_000)
+	coll := r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName)
 
-	cursor, err := r.db.Database(r.dbName).Collection(r.historyNotificationCollectionName).Find(ctx, bson.M{"watcher_id": watcher.ID}, options.Find().SetSort(sortCriteria))
+	cursor, err := coll.Find(ctx, bson.M{"watcher_id": watcher.ID}, opts)
 	if err != nil {
 		r.logger.Errorf("unable to find history notifications due to internal error: %v", err)
 		return err

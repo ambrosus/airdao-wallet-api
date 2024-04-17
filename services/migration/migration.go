@@ -85,12 +85,17 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 			return err
 		}
 
-		// Check if historical_notifications field is nil
 		if w.HistoricalNotifications != nil {
 			logger.Info("Migrating historical notifications...", w.ID)
 
-			// Iterate over historical notifications only if it's not nil
-			for _, notification := range *w.HistoricalNotifications {
+			// save last 10_000 notifications
+			startIndex := 0
+			if len(*w.HistoricalNotifications) > 10_000 {
+				startIndex = len(*w.HistoricalNotifications) - 10_000
+			}
+			logger.Info("len(*w.HistoricalNotifications)", len(*w.HistoricalNotifications), "startIndex", startIndex)
+			for i := startIndex; i < len(*w.HistoricalNotifications); i++ {
+				notification := (*w.HistoricalNotifications)[i]
 				notification.ID = primitive.NewObjectID()
 				notification.WatcherID = w.ID
 				_, err := historyCollection.InsertOne(context.Background(), notification)
@@ -98,7 +103,6 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 					return err
 				}
 			}
-
 			// Update watcher to set historical_notifications to nil
 			_, err := watcherCollection.UpdateOne(
 				context.Background(),
