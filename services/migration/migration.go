@@ -3,6 +3,7 @@ package migration
 import (
 	"airdao-mobile-api/services/watcher"
 	"errors"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
@@ -49,15 +50,24 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 		return nil
 	}
 
-	// Create index { watcher_id: 1, notification.timestamp: -1 }
-
 	indexModel := mongo.IndexModel{
 		Keys: bson.D{
 			{Key: "watcher_id", Value: 1},
-			{Key: "notification.timestamp", Value: -1},
+			{Key: "timestamp", Value: -1},
 		},
 	}
 	_, err := historyCollection.Indexes().CreateOne(context.Background(), indexModel)
+	if err != nil {
+		return err
+	}
+
+	pushTokenIndex := mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "push_token", Value: 1},
+		},
+	}
+
+	_, err = watcherCollection.Indexes().CreateOne(context.Background(), pushTokenIndex)
 	if err != nil {
 		return err
 	}
@@ -70,30 +80,33 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 	defer cursor.Close(context.Background())
 
 	for cursor.Next(context.Background()) {
-		var watcher watcher.Watcher
-		if err := cursor.Decode(&watcher); err != nil {
+		var w watcher.Watcher
+		if err := cursor.Decode(&w); err != nil {
 			return err
 		}
 
-		// Check if historical_notifications field is nil
-		if watcher.HistoricalNotifications != nil {
-			logger.Info("Migrating historical notifications...", watcher.ID)
+		if w.HistoricalNotifications != nil {
+			logger.Info("Migrating historical notifications...", w.ID)
 
-			// Iterate over historical notifications only if it's not nil
-			for _, notification := range *watcher.HistoricalNotifications {
-				_, err := historyCollection.InsertOne(context.Background(), &HistoryNotificationDocument{
-					WatcherID:    watcher.ID,
-					Notification: notification,
-				})
+			// save last 10_000 notifications
+			startIndex := 0
+			if len(*w.HistoricalNotifications) > 10_000 {
+				startIndex = len(*w.HistoricalNotifications) - 10_000
+			}
+			logger.Info("len(*w.HistoricalNotifications)", len(*w.HistoricalNotifications), "startIndex", startIndex)
+			for i := startIndex; i < len(*w.HistoricalNotifications); i++ {
+				notification := (*w.HistoricalNotifications)[i]
+				notification.ID = primitive.NewObjectID()
+				notification.WatcherID = w.ID
+				_, err := historyCollection.InsertOne(context.Background(), notification)
 				if err != nil {
 					return err
 				}
 			}
-
 			// Update watcher to set historical_notifications to nil
 			_, err := watcherCollection.UpdateOne(
 				context.Background(),
-				bson.M{"_id": watcher.ID},
+				bson.M{"_id": w.ID},
 				bson.M{"$set": bson.M{"historical_notifications": nil}},
 			)
 			if err != nil {
@@ -101,9 +114,8 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 			}
 		} else {
 			// Log a message or handle the case when historical_notifications is nil
-			logger.Info("No historical notifications found for watcher:", watcher.ID)
+			logger.Info("No historical notifications found for watcher:", w.ID)
 		}
-
 	}
 
 	if err := cursor.Err(); err != nil {
@@ -120,5 +132,9 @@ func historicalNotificationMigration(db *mongo.Client, dbName string, logger *za
 	if err != nil {
 		return err
 	}
+
+	// Pause execution for index to be fully formed
+	time.Sleep(5 * time.Second)
+
 	return nil
 }

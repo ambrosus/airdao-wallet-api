@@ -58,9 +58,11 @@ func TestHeathRoute(t *testing.T) {
 		// Perform the request plain with the app,
 		// the second argument is a request latency
 		// (set to -1 for no latency)
-		resp, _ := app.Test(req, 1)
+		resp, err := app.Test(req, 1)
+		if err != nil {
+			t.Fatalf("failed to send test request: %v", err)
+		}
 
-		// Verify that the response body is "OK"
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatalf("failed to read response body: %v", err)

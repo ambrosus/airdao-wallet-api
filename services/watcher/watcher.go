@@ -14,10 +14,12 @@ type Address struct {
 }
 
 type HistoryNotification struct {
-	Title     string    `json:"title" bson:"title"`
-	Body      string    `json:"body" bson:"body"`
-	Sent      bool      `json:"sent" bson:"sent"`
-	Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+	ID        primitive.ObjectID `json:"id" bson:"_id"`
+	WatcherID primitive.ObjectID `json:"watcher_id" bson:"watcher_id"`
+	Title     string             `json:"title" bson:"title"`
+	Body      string             `json:"body" bson:"body"`
+	Sent      bool               `json:"sent" bson:"sent"`
+	Timestamp time.Time          `json:"timestamp" bson:"timestamp"`
 }
 
 type Watcher struct {
@@ -112,16 +114,20 @@ func (w *Watcher) SetTokenPrice(price float64) {
 
 func (w *Watcher) AddNotification(title, body string, sent bool, timestamp time.Time) {
 	if w.HistoricalNotifications == nil {
-		w.HistoricalNotifications = &[]*HistoryNotification{{
-			Title:     title,
-			Body:      body,
-			Sent:      sent,
-			Timestamp: timestamp,
-		}}
-	} else {
-		*w.HistoricalNotifications = append(*w.HistoricalNotifications, &HistoryNotification{
-			Title: title, Body: body, Sent: sent, Timestamp: timestamp,
-		})
+		w.HistoricalNotifications = &[]*HistoryNotification{}
+	}
+
+	*w.HistoricalNotifications = append(*w.HistoricalNotifications, &HistoryNotification{
+		ID:        primitive.NewObjectID(),
+		WatcherID: w.ID,
+		Title:     title,
+		Body:      body,
+		Sent:      sent,
+		Timestamp: timestamp,
+	})
+
+	if len(*w.HistoricalNotifications) > 10_000 {
+		*w.HistoricalNotifications = (*w.HistoricalNotifications)[len(*w.HistoricalNotifications)-10_000:]
 	}
 	w.UpdatedAt = time.Now()
 }
