@@ -13,3 +13,4 @@ typechain-types
 *.d.ts
 .npmrc
 .DS_Store
+.idea
