@@ -23,6 +23,7 @@ type HistoryNotification struct {
 type Watcher struct {
 	ID primitive.ObjectID `json:"id" bson:"_id"`
 
+	DeviceId          string   `json:"device_id" bson:"device_id"`
 	PushToken         string   `json:"push_token" bson:"push_token"`
 	Threshold         *float64 `json:"threshold" bson:"threshold"`
 	TokenPrice        *float64 `json:"token_price" bson:"token_price"`
@@ -112,18 +113,20 @@ func (w *Watcher) SetTokenPrice(price float64) {
 
 func (w *Watcher) AddNotification(title, body string, sent bool, timestamp time.Time) {
 	if w.HistoricalNotifications == nil {
-		w.HistoricalNotifications = &[]*HistoryNotification{{
-			Title:     title,
-			Body:      body,
-			Sent:      sent,
-			Timestamp: timestamp,
-		}}
-	} else {
-		*w.HistoricalNotifications = append(*w.HistoricalNotifications, &HistoryNotification{
-			Title: title, Body: body, Sent: sent, Timestamp: timestamp,
-		})
+		w.HistoricalNotifications = &[]*HistoryNotification{}
 	}
-	w.UpdatedAt = time.Now()
+
+	*w.HistoricalNotifications = append(*w.HistoricalNotifications, &HistoryNotification{
+		Title:     title,
+		Body:      body,
+		Sent:      sent,
+		Timestamp: timestamp,
+	})
+
+	if len(*w.HistoricalNotifications) > 10_000 {
+		*w.HistoricalNotifications = (*w.HistoricalNotifications)[len(*w.HistoricalNotifications)-10_000:]
+	}
+
 }
 
 func (w *Watcher) SetTxNotification(v string) {
@@ -148,5 +151,10 @@ func (w *Watcher) SetLastSuccessDate(date time.Time) {
 
 func (w *Watcher) SetPushToken(v string) {
 	w.PushToken = v
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetDeviceId(v string) {
+	w.DeviceId = v
 	w.UpdatedAt = time.Now()
 }

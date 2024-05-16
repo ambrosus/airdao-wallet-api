@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - dev
+      - limit-history
 
 env:
   REGISTRY: ghcr.io

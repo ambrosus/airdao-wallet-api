@@ -60,6 +60,7 @@ func (h *Handler) GetWatcherHistoryPricesHandler(c *fiber.Ctx) error {
 
 type CreateWatcher struct {
 	PushToken string `json:"push_token" validate:"required"`
+	DeviceId  string `json:"device_id" validate:"omitempty"`
 }
 
 func (h *Handler) CreateWatcherHandler(c *fiber.Ctx) error {
@@ -74,8 +75,7 @@ func (h *Handler) CreateWatcherHandler(c *fiber.Ctx) error {
 	if err := Validate(reqBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	if err := h.service.CreateWatcher(c.Context(), reqBody.PushToken); err != nil {
+	if err := h.service.CreateWatcher(c.Context(), reqBody.PushToken, reqBody.DeviceId); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -163,6 +163,7 @@ func (h *Handler) DeleteWatcherAddressesHandler(c *fiber.Ctx) error {
 type UpdateWatcherPushToken struct {
 	OldPushToken string `json:"old_push_token" validate:"required"`
 	NewPushToken string `json:"new_push_token" validate:"required"`
+	DeviceId     string `json:"device_id" validate:"omitempty"`
 }
 
 func (h *Handler) UpdateWatcherPushTokenHandler(c *fiber.Ctx) error {
@@ -178,7 +179,7 @@ func (h *Handler) UpdateWatcherPushTokenHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if err := h.service.UpdateWatcherPushToken(c.Context(), reqBody.OldPushToken, reqBody.NewPushToken); err != nil {
+	if err := h.service.UpdateWatcherPushToken(c.Context(), reqBody.OldPushToken, reqBody.NewPushToken, reqBody.DeviceId); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
