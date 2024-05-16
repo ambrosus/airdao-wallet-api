@@ -1,7 +1,7 @@
 import {Application} from "express";
 import {container} from "tsyringe";
 import {WatcherNetwork} from "./watcher.network";
-
+// todo move to httpServer service
 
 const watcherNetwork = container.resolve(WatcherNetwork)
 

@@ -7,7 +7,7 @@ async function main() {
     if (!dbUrl) {
         throw new Error("DB URL not found");
     }
-
+    // todo discuss do we even need to use mongoose?? the data validation should be done in the service layer
     await mongoose.connect(dbUrl);
 
     const app = express();

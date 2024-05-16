@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { WatcherService } from "./watcher.service";
 
+// todo move to httpServer service
 export class WatcherNetwork {
 
   constructor(private readonly watcherService: WatcherService) {}
@@ -19,7 +20,7 @@ export class WatcherNetwork {
   }
   async getWatcherHistoryPrices(req: Request, res:Response ) {
     try {
-      
+
     } catch (e) {
       this.handleError(res, e as Error)
     }
@@ -36,35 +37,35 @@ export class WatcherNetwork {
   }
   async updateWatcher(req: Request, res:Response ) {
     try {
-      
+
     } catch (e) {
       this.handleError(res, e as Error)
     }
   }
   async deleteWatcher(req: Request, res:Response ) {
     try {
-      
+
     } catch (e) {
       this.handleError(res, e as Error)
     }
   }
   async deleteWatcherAddresses(req: Request, res:Response ) {
     try {
-      
+
     } catch (e) {
       this.handleError(res, e as Error)
     }
   }
   async watcherCallback(req: Request, res:Response ) {
     try {
-      
+
     } catch (e) {
       this.handleError(res, e as Error)
     }
   }
   async updateWatcherPushToken(req: Request, res:Response ) {
     try {
-      
+
     } catch (e) {
       this.handleError(res, e as Error)
     }
