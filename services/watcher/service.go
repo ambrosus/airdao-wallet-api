@@ -38,12 +38,12 @@ type Service interface {
 
 	GetWatcher(ctx context.Context, pushToken string) (*Watcher, error)
 	GetWatcherHistoryPrices(ctx context.Context) *CGData
-	CreateWatcher(ctx context.Context, pushToken string) error
+	CreateWatcher(ctx context.Context, pushToken string, deviceId string) error
 	UpdateWatcher(ctx context.Context, pushToken string, addresses *[]string, threshold *float64, txNotification, priceNotification *string) error
 	DeleteWatcher(ctx context.Context, pushToken string) error
 	DeleteWatcherAddresses(ctx context.Context, pushToken string, addresses []string) error
 	DeleteWatchersWithStaleData(ctx context.Context) error
-	UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error
+	UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string, deviceId string) error
 }
 
 type watchers struct {
@@ -490,7 +490,7 @@ func (s *service) GetWatcherHistoryPrices(ctx context.Context) *CGData {
 	return &CGData{Prices: s.cachedCgPrice}
 }
 
-func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
+func (s *service) CreateWatcher(ctx context.Context, pushToken string, deviceId string) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
 
 	dbWatcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
@@ -510,6 +510,7 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string) error {
 	watcher.SetThreshold(5)
 	watcher.SetTxNotification(ON)
 	watcher.SetPriceNotification(ON)
+	watcher.SetDeviceId(deviceId)
 
 	var priceData *PriceData
 	if err := s.doRequest(s.tokenPriceUrl, nil, &priceData); err != nil {
@@ -724,7 +725,7 @@ func (s *service) DeleteWatchersWithStaleData(ctx context.Context) error {
 	return nil
 }
 
-func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string) error {
+func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string, deviceId string) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(olpPushToken))
 
 	watcher, err := s.GetWatcher(ctx, olpPushToken)
@@ -738,6 +739,7 @@ func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken strin
 	}
 
 	watcher.SetPushToken(base64.StdEncoding.EncodeToString([]byte(newPushToken)))
+	watcher.SetDeviceId(deviceId)
 
 	if err := s.repository.UpdateWatcher(ctx, watcher); err != nil {
 		s.logger.Errorf("UpdateWatcherPushToken repository.UpdateWatcher error %v\n", err)

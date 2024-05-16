@@ -23,6 +23,7 @@ type HistoryNotification struct {
 type Watcher struct {
 	ID primitive.ObjectID `json:"id" bson:"_id"`
 
+	DeviceId          string   `json:"device_id" bson:"device_id"`
 	PushToken         string   `json:"push_token" bson:"push_token"`
 	Threshold         *float64 `json:"threshold" bson:"threshold"`
 	TokenPrice        *float64 `json:"token_price" bson:"token_price"`
@@ -150,5 +151,10 @@ func (w *Watcher) SetLastSuccessDate(date time.Time) {
 
 func (w *Watcher) SetPushToken(v string) {
 	w.PushToken = v
+	w.UpdatedAt = time.Now()
+}
+
+func (w *Watcher) SetDeviceId(v string) {
+	w.DeviceId = v
 	w.UpdatedAt = time.Now()
 }
