@@ -756,7 +756,10 @@ func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken strin
 			s.logger.Errorf("UpdateWatcherPushToken GetWatcher error %v\n", err)
 			return err
 		}
+	}
 
+	if watcher == nil {
+		return errors.New("watcher not found for device id or old push token")
 	}
 
 	watcher.SetPushToken(base64.StdEncoding.EncodeToString([]byte(newPushToken)))
