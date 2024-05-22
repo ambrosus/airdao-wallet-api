@@ -738,14 +738,16 @@ func (s *service) DeleteWatchersWithStaleData(ctx context.Context) error {
 func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken string, newPushToken string, deviceId string) error {
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(olpPushToken))
 
-	watcher, err := s.GetWatcher(ctx, olpPushToken)
+	watcher, err := s.repository.GetWatcher(ctx, bson.M{"device_id": deviceId})
 	if err != nil {
-		s.logger.Errorf("UpdateWatcherPushToken GetWatcher error %v\n", err)
+		s.logger.Errorf("UpdateWatcherPushToken repository.GetWatcher error %v\n", err)
 		return err
 	}
+
 	if watcher == nil {
-		s.logger.Errorf("UpdateWatcherPushToken watcher not found\n")
-		return err
+		// try to get by old push token
+		watcher, err = s.GetWatcher(ctx, olpPushToken)
+
 	}
 
 	watcher.SetPushToken(base64.StdEncoding.EncodeToString([]byte(newPushToken)))
