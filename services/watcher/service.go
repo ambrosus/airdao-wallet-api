@@ -747,6 +747,10 @@ func (s *service) UpdateWatcherPushToken(ctx context.Context, olpPushToken strin
 	if watcher == nil {
 		// try to get by old push token
 		watcher, err = s.GetWatcher(ctx, olpPushToken)
+		if err != nil {
+			s.logger.Errorf("UpdateWatcherPushToken GetWatcher error %v\n", err)
+			return err
+		}
 
 	}
 
