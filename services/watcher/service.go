@@ -470,6 +470,8 @@ func (s *service) GetWatcher(ctx context.Context, pushToken string) (*Watcher, e
 		return watcher, nil
 	}
 
+	s.logger.Infof("GetWatcher pushToken %v\n", pushToken)
+	s.logger.Infof("GetWatcher repository.GetWatcher %v\n", encodePushToken)
 	watcher, err := s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
 	if err != nil {
 		return nil, err
