@@ -494,9 +494,7 @@ func (s *service) GetWatcherHistoryPrices(ctx context.Context) *CGData {
 
 func (s *service) CreateWatcher(ctx context.Context, pushToken string, deviceId string) error {
 	//if watcher with deviceId exists then update, not create
-	if deviceId != "" {
 
-	}
 	dbWatcher, err := s.repository.GetWatcher(ctx, bson.M{"device_id": deviceId})
 	if err != nil {
 		return err
