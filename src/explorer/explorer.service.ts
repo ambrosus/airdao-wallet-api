@@ -87,3 +87,13 @@
 // 		}
 // 	}
 // }
+
+
+// todo think about how will we mock the explorer integration, so so the /callback-handler endpoint will get called
+class ExplorerService {
+    getTransactions(address: string) {
+    }
+
+    watchAddress(address: string) {
+    }
+}

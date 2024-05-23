@@ -1,6 +1,6 @@
 import {ethers} from 'ethers';
 
-// todo ask Taras if front-end depends on this error format or is it just human readable
+// todo ask Evgeniy if front-end depends on this error format or is it just human readable
 interface ValidationResult {
     field: string;
     message: string;
