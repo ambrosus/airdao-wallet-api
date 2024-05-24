@@ -500,6 +500,8 @@ func (s *service) CreateWatcher(ctx context.Context, pushToken string, deviceId 
 		return err
 	}
 
+	s.logger.Infof("CreateWatcher dbWatcher %v\n", dbWatcher)
+
 	if deviceId != "" && dbWatcher != nil {
 		err := s.DeleteWatcher(ctx, dbWatcher.PushToken)
 		if err != nil {
