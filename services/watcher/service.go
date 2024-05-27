@@ -493,33 +493,33 @@ func (s *service) GetWatcherHistoryPrices(ctx context.Context) *CGData {
 }
 
 func (s *service) CreateWatcher(ctx context.Context, pushToken string, deviceId string) error {
-	//if watcher with deviceId exists, delete it before create, not create
-
+	// Check if a watcher with the given deviceId exists
 	dbWatcher, err := s.repository.GetWatcher(ctx, bson.M{"device_id": deviceId})
 	if err != nil {
 		return err
 	}
 
-	s.logger.Infof("CreateWatcher dbWatcher %v\n", dbWatcher)
-
+	// If a watcher with the deviceId exists, delete it
 	if deviceId != "" && dbWatcher != nil {
-		err := s.DeleteWatcher(ctx, dbWatcher.PushToken)
-		if err != nil {
+		if err := s.repository.DeleteWatcher(ctx, bson.M{"_id": dbWatcher.ID}); err != nil {
 			return err
 		}
 	}
 
+	// Encode the push token
 	encodePushToken := base64.StdEncoding.EncodeToString([]byte(pushToken))
 
+	// Check if a watcher with the given push token exists
 	dbWatcher, err = s.repository.GetWatcher(ctx, bson.M{"push_token": encodePushToken})
 	if err != nil {
 		return err
 	}
 
 	if dbWatcher != nil {
-		return errors.New("watcher for this address and token already exist")
+		return errors.New("watcher for this address and token already exists")
 	}
 
+	// Create a new watcher
 	watcher, err := NewWatcher(encodePushToken)
 	if err != nil {
 		return err
