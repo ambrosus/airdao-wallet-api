@@ -5,7 +5,7 @@ on:
     branches:
       - master
       - dev
-      - limit-history
+      - undo-package-update
 
 env:
   REGISTRY: ghcr.io
