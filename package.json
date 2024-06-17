@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format:check": "eslint ./ && prettier --check ./",
+    "format:fix": "eslint --fix ./ && prettier --write ./"
   },
   "repository": {
     "type": "git",
@@ -17,13 +19,21 @@
   },
   "homepage": "https://github.com/ambrosus/airdao-wallet-ap#readme",
   "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.54.1",
+    "@typescript-eslint/parser": "^5.54.1",
+    "axios": "^1.7.2",
     "cors": "^2.8.5",
+    "cron": "^3.1.7",
     "dotenv": "^16.4.5",
     "ethers": "^6.12.1",
     "express": "^4.19.2",
     "firebase": "^10.12.0",
+    "firebase-admin": "^12.1.1",
+    "ioredis": "^5.4.1",
     "mongoose": "^8.3.5",
-    "tsyringe": "^4.8.0"
+    "tsyringe": "^4.8.0",
+    "eslint": "8.35.0",
+    "eslint-config-prettier": "^8.7.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

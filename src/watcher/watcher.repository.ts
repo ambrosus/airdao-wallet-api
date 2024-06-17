@@ -1,32 +1,35 @@
+import {Watcher, WatcherModel} from "./watcher.model";
 
 
-export interface IWatcherRepository {
-    getWatcher(pushToken: string): Promise<any>; // todo define return type accordingly
-    getWatcherHistoryPrices(): Promise<any>; // todo define return type accordingly
-    createWatcher(pushToken: string, deviceId: string): Promise<void>;
-    updateWatcher(): Promise<void>;
-    deleteWatcher(): Promise<void>;
-    deleteWatcherAddresses(): Promise<void>;
-    watcherCallback(): Promise<void>;
-    updateWatcherPushToken(): Promise<void>;
-}
+export class WatcherRepository {
+    private readonly watcherModel: typeof WatcherModel;
 
-export class WatcherRepository implements IWatcherRepository{
-    constructor() {}
-    async getWatcher() {
+    constructor(watcherModel: typeof WatcherModel) {
+        this.watcherModel = watcherModel;
     }
-    async getWatcherHistoryPrices() {
+
+    async getAllWatchers(filter?: Record<string, string>) {
+        return this.watcherModel.find(filter!);
     }
-    async createWatcher() {
+    async getWatcher(pushToken: string): Promise<Watcher | null> {
+        return this.watcherModel.findOne({pushToken});
     }
-    async updateWatcher() {
+
+    async getWatcherByDeviceId(deviceId: string): Promise<Watcher | null> {
+        return this.watcherModel.findOne({deviceId});
     }
-    async deleteWatcher() {
+    async createWatcher(watcher: Watcher) {
+        await this.watcherModel.create(watcher);
+    }
+
+    async updateWatcher(filter: Record<string, string>, update: Record<string, unknown>) {
+        return this.watcherModel.findOneAndUpdate(filter, update);
+    }
+    async deleteWatcher(filer: Record<string, string>) {
+        return this.watcherModel.deleteOne(filer);
     }
     async deleteWatcherAddresses() {
     }
     async watcherCallback() {
-    }
-    async updateWatcherPushToken() {
     }
 }

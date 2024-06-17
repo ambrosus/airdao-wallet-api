@@ -17,18 +17,18 @@ class HttpServerService {
     }
 
     init() {
-        this.app.get("/watcher/:token", this.handlers.getWatcher.bind(this.handlers))
-        this.app.get("/watcher-historical-prices", this.handlers.getWatcherHistoryPrices.bind(this.handlers))
+        this.app.get("/watcher/:token", this.handlers.getWatcher.bind(this.handlers));
+        this.app.get("/watcher-historical-prices", this.handlers.getWatcherHistoryPrices.bind(this.handlers));
 
-        this.app.post("/watcher", this.handlers.createWatcher.bind(this.handlers))
-        this.app.put("/watcher", this.handlers.updateWatcher.bind(this.handlers))
+        this.app.post("/watcher", this.handlers.createWatcher.bind(this.handlers));
+        this.app.put("/watcher", this.handlers.updateWatcher.bind(this.handlers));
 
-        this.app.delete("/watcher", this.handlers.deleteWatcher.bind(this.handlers))
-        this.app.delete("/watcher-addresses", this.handlers.deleteWatcherAddresses.bind(this.handlers))
+        this.app.delete("/watcher", this.handlers.deleteWatcher.bind(this.handlers));
+        this.app.delete("/watcher-addresses", this.handlers.deleteWatcherAddresses.bind(this.handlers));
 
-        this.app.post("/explorer-callback", this.handlers.watcherCallback.bind(this.handlers))
+        this.app.post("/explorer-callback", this.handlers.watcherCallback.bind(this.handlers));
 
-        this.app.put("/push-token", this.handlers.updateWatcherPushToken.bind(this.handlers))
+        this.app.put("/push-token", this.handlers.updateWatcherPushToken.bind(this.handlers));
     }
 
     start(port: number) {

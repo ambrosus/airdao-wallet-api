@@ -27,14 +27,14 @@ export class WatcherHandlers implements IHandlers {
 
             res.json(watcher);
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
     async getWatcherHistoryPrices(req: Request, res:Response ) {
         try {
 
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
     async createWatcher(req: Request, res:Response ) {
@@ -47,42 +47,42 @@ export class WatcherHandlers implements IHandlers {
             const watcher = await this.watcherService.createWatcher(pushToken, deviceId);
             res.json(watcher);
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
     async updateWatcher(req: Request, res:Response ) {
         try {
 
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
     async deleteWatcher(req: Request, res:Response ) {
         try {
 
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
     async deleteWatcherAddresses(req: Request, res:Response ) {
         try {
 
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
     async watcherCallback(req: Request, res:Response ) {
         try {
 
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
     async updateWatcherPushToken(req: Request, res:Response ) {
         try {
 
         } catch (e) {
-            this.handleError(res, e as Error)
+            this.handleError(res, e as Error);
         }
     }
 
