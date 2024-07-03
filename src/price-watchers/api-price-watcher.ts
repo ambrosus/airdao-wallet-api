@@ -2,7 +2,7 @@ import { CronJob } from "cron";
 import { singleton } from "tsyringe";
 import axios from "axios";
 import Redis from "ioredis";
-import {tokenPriceUrl} from "../config";
+import { tokenPriceUrl } from "../config";
 
 @singleton()
 export class ApiPriceWatcher {

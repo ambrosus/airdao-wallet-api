@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
+import {singleton} from "tsyringe";
 
-
+@singleton()
 export class NotificationService  {
     private readonly fcmClient: admin.messaging.Messaging;
     private readonly androidChannel: string;

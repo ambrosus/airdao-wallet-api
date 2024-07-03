@@ -1,8 +1,10 @@
-import {WatcherRepository} from "./watcher.repository";
 import Redis from "ioredis";
-import {Watcher} from "./watcher.model";
-import {ExplorerService} from "../explorer";
+import {singleton} from "tsyringe";
+import { Watcher } from "./watcher.model";
+import { ExplorerService } from "../explorer";
+import { WatcherRepository } from "./watcher.repository";
 
+@singleton()
 export class WatcherService {
 
     constructor(
@@ -12,12 +14,22 @@ export class WatcherService {
     ) {}
 
     async getWatcher(pushToken: string) {
-        return await this.watcherRepository.getWatcher(pushToken);
+        const encodedPushToken = Buffer.from(pushToken).toString("base64");
+
+        const watcher =  await this.watcherRepository.getWatcher(encodedPushToken);
+        if (!watcher) {
+            throw new Error("watcher not found");
+        }
+
+        // TODO: add historical notifications
+
+        return {...watcher, historicalNotifications: []};
     }
 
     async getAllWatchers(filter?: Record<string, string>) {
         return await this.watcherRepository.getAllWatchers(filter);
     }
+
     async getWatcherHistoryPrices() {
         return this.cacheStorage.get("cgPrices");
     }
@@ -51,13 +63,16 @@ export class WatcherService {
             deviceId,
         } as unknown as Watcher);
     }
-    async updateWatcher(pushToken: string, addresses: string[], threshold: number, txNotification: string, priceNotification: string) {
+
+    async updateWatcher(pushToken: string, updateFields: {addresses?: string[], threshold?: number, txNotification?: string, priceNotification?: string}) {
         const watcher = await this.watcherRepository.getWatcher(pushToken);
         if (!watcher) {
             throw new Error("watcher not found");
         }
 
-        if (addresses.length > 0) {
+        const {addresses, threshold, txNotification, priceNotification} = updateFields;
+
+        if (addresses && addresses.length > 0) {
             const uniqueAddresses = addresses.filter(address => !watcher.addresses?.includes(address)) || [];
 
             if (uniqueAddresses.length > 0) {
@@ -78,18 +93,44 @@ export class WatcherService {
 
     async updateWatcherPrice(pushToken: string, price: number) {
         await this.watcherRepository.updateWatcher({pushToken}, {tokenPrice: price});
+    }
+
+    async deleteWatcher(pushToken: string) {
+        const encodedPushToken = Buffer.from(pushToken).toString("base64");
+
+        const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
+        if (!watcher) {
+            throw new Error("watcher not found");
+        }
+        if(watcher.addresses!.length > 0) await this.explorerService.unsubscribeAddresses(watcher.addresses!);
+        await this.watcherRepository.deleteWatcher({pushToken});
+
 
     }
-    async deleteWatcher() {
 
+    async deleteWatcherAddresses(pushToken: string, addresses: string[]) {
+        const encodedPushToken = Buffer.from(pushToken).toString("base64");
+        const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
+        if (!watcher) {
+            throw new Error("watcher not found");
+        }
+        if (addresses.length > 0) {
+            await this.explorerService.unsubscribeAddresses(addresses);
+            await this.watcherRepository.updateWatcher({pushToken}, {addresses: watcher.addresses?.filter(address => !addresses.includes(address))});
+        }
     }
-    async deleteWatcherAddresses() {
 
-    }
-    async watcherCallback() {
+    async updateWatcherPushToken(oldPushToken: string, newPushToken: string, deviceId?: string) {
+        const encodedOldPushToken = Buffer.from(oldPushToken).toString("base64");
+        let watcher;
+        if(deviceId) watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
+        else watcher = await this.watcherRepository.getWatcher(encodedOldPushToken);
+        if (!watcher) {
+            throw new Error("watcher not found for device id or old push token");
+        }
 
-    }
-    async updateWatcherPushToken() {
+
+        await this.watcherRepository.updateWatcher({pushToken: oldPushToken}, {pushToken: newPushToken, deviceId});
 
     }
 }

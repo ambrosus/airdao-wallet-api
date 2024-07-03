@@ -2,7 +2,7 @@ import { CronJob } from "cron";
 import { singleton } from "tsyringe";
 import Redis from "ioredis";
 import { NotificationService } from "../notification-sender";
-import {WatcherService} from "../watcher/watcher.service";
+import { WatcherService } from "../watcher";
 
 @singleton()
 export class PriceWatcher {
@@ -32,7 +32,7 @@ export class PriceWatcher {
             const roundedPercentage: number = Math.abs((Math.round(percentage * 100) / 100));
             const roundedPrice: string = Number(tokenPrice).toFixed(5);
 
-            if (watcher.txNotification === "ON") {
+            if (watcher.priceNotification === "ON") {
                 const title = "Price Alert";
                 const data = {type: "price-alert", percentage: roundedPercentage};
                 let body;
