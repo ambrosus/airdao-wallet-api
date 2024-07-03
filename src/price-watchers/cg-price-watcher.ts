@@ -8,6 +8,7 @@ import { cgTokenPriceUrl } from "../config";
 export class CgPriceWatcher {
     constructor(private readonly cacheStorage: Redis) {
     }
+
     async run() {
         const job = new CronJob("0 */12 * * *", async () => this.watchCgPrice());
         job.start();

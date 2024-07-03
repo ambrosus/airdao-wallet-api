@@ -18,32 +18,40 @@ export class PriceWatcher {
     }
 
     private async watchPrice() {
-        const watchers = await this.watcherService.getAllWatchers();
+        const watchers = await this.watcherService.getAllWatchers({ priceNotification: "ON" });
         await Promise.all(watchers.map(async (watcher) => {
             const tokenPrice = await this.cacheStorage.get("apiPrice");
             if (!tokenPrice) {
                 throw new Error("Price data not found");
             }
 
-            const percentage: number = (Number(tokenPrice) - watcher.tokenPrice!) / watcher.tokenPrice! * 100;
+            const currentPrice = Number(tokenPrice);
+            const percentage: number = (currentPrice - watcher.tokenPrice!) / watcher.tokenPrice! * 100;
             const roundedPercentage: number = Math.abs((Math.round(percentage * 100) / 100));
-            const roundedPrice: string = Number(tokenPrice).toFixed(5);
+            const roundedPrice: string = currentPrice.toFixed(5);
 
-            if (watcher.priceNotification === "ON") {
-                const title = "Price Alert";
-                const data = { type: "price-alert", percentage: roundedPercentage };
-                let body;
-                
+            const title = "Price Alert";
+            const data = { type: "price-alert", percentage: roundedPercentage };
+            let body = "";
 
-                if (roundedPercentage >= watcher.threshold) {
-                    body = `🚀 AMB Price changed on +${roundedPercentage}%! Current price $${roundedPrice}`;
-                } else if (roundedPercentage <= -watcher.threshold) {
-                    body = `🔻 AMB Price changed on -${roundedPercentage}%! Current price $${roundedPrice}`;
-                }
 
-                await this.notificationService.sendNotification({ title, body: body as unknown as string, pushToken: watcher.pushToken, data });
+            if (roundedPercentage >= watcher.threshold) {
+                body = `🚀 AMB Price changed on +${roundedPercentage}%! Current price $${roundedPrice}`;
+            } else if (roundedPercentage <= -watcher.threshold) {
+                body = `🔻 AMB Price changed on -${roundedPercentage}%! Current price $${roundedPrice}`;
             }
-            await this.watcherService.updateWatcherPrice(watcher.pushToken, Number(tokenPrice));
+
+            const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
+
+            await Promise.all([
+                this.notificationService.sendNotification({
+                    title,
+                    body,
+                    pushToken: decodedPushToken,
+                    data
+                }),
+                this.watcherService.updateWatcherPrice(watcher.pushToken, currentPrice)
+            ]);
         }));
     }
 }

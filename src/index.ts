@@ -5,6 +5,7 @@ import Redis from "ioredis";
 import { dbUrl, redisUrl } from "./config";
 import { CgPriceWatcher, ApiPriceWatcher } from "./price-watchers";
 import { container } from "tsyringe";
+import { setupRoutes } from "./router";
 
 
 async function main() {
@@ -19,6 +20,8 @@ async function main() {
     app.use(cors());
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+
+    setupRoutes(app);
 
     const cgPriceWatcher = container.resolve(CgPriceWatcher);
     const apiPriceWatcher = container.resolve(ApiPriceWatcher);

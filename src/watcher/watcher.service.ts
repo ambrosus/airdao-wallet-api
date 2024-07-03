@@ -77,7 +77,9 @@ export class WatcherService {
     }
 
     async updateWatcher(pushToken: string, updateFields: { addresses?: string[], threshold?: number, txNotification?: string, priceNotification?: string }) {
-        const watcher = await this.watcherRepository.getWatcher(pushToken);
+        const encodedPushToken = Buffer.from(pushToken).toString("base64");
+
+        const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
 
         if (!watcher) {
             throw new Error("watcher not found");

@@ -45,18 +45,4 @@ const routes = (app: Application) => {
         watcherNetwork.updateWatcherPushToken.bind(watcherNetwork)
     );
 };
-
-
-//	router.Get("/watcher/:token", h.GetWatcherHandler)
-// 	router.Get("/watcher-historical-prices", h.GetWatcherHistoryPricesHandler)
-//
-// 	router.Post("/watcher", h.CreateWatcherHandler)
-// 	router.Put("/watcher", h.UpdateWatcherHandler)
-//
-// 	router.Delete("/watcher", h.DeleteWatcherHandler)
-// 	router.Delete("/watcher-addresses", h.DeleteWatcherAddressesHandler)
-//
-// 	router.Post("/explorer-callback", h.WatcherCallbackHandler)
-//
-// 	router.Put("/push-token", h.UpdateWatcherPushTokenHandler)
 export default routes;
