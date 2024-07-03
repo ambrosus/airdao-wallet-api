@@ -13,7 +13,7 @@ export class WatcherNetwork {
 
     async getWatcher(req: Request, res: Response): Promise<void> {
         try {
-            const {pushToken} = req.params;
+            const { pushToken } = req.params;
             const watcher = await this.service.getWatcher(pushToken);
             res.json(watcher);
         } catch (error) {
@@ -32,7 +32,7 @@ export class WatcherNetwork {
 
     async createWatcher(req: Request, res: Response): Promise<void> {
         try {
-            const {pushToken, deviceId} = req.body;
+            const { pushToken, deviceId } = req.body;
             await this.service.createWatcher(pushToken, deviceId);
             res.json({ message: "Watcher created" });
         } catch (error) {
@@ -42,8 +42,8 @@ export class WatcherNetwork {
 
     async updateWatcher(req: Request, res: Response): Promise<void> {
         try {
-            const {pushToken} = req.params;
-            const {threshold, txNotification, priceNotification, addresses} = req.body;
+            const { pushToken } = req.params;
+            const { threshold, txNotification, priceNotification, addresses } = req.body;
             await this.service.updateWatcher(pushToken, {
                 addresses,
                 threshold,
@@ -58,7 +58,7 @@ export class WatcherNetwork {
 
     async deleteWatcher(req: Request, res: Response): Promise<void> {
         try {
-            const {pushToken} = req.params;
+            const { pushToken } = req.params;
             await this.service.deleteWatcher(pushToken);
             res.json({ message: "Watcher deleted" });
         } catch (error) {
@@ -68,7 +68,7 @@ export class WatcherNetwork {
 
     async deleteWatcherAddresses(req: Request, res: Response): Promise<void> {
         try {
-            const {pushToken, addresses} = req.body;
+            const { pushToken, addresses } = req.body;
             await this.service.deleteWatcherAddresses(pushToken, addresses);
             res.json({ message: "Watcher addresses deleted" });
         } catch (error) {
@@ -78,7 +78,7 @@ export class WatcherNetwork {
 
     async updateWatcherPushToken(req: Request, res: Response): Promise<void> {
         try {
-            const {oldPushToken, newPushToken} = req.body;
+            const { oldPushToken, newPushToken } = req.body;
             await this.service.updateWatcherPushToken(oldPushToken, newPushToken);
             res.json({ message: "Watcher push token updated" });
         } catch (error) {

@@ -14,7 +14,7 @@ export class CgPriceWatcher {
     }
 
     private async watchCgPrice() {
-        const {data: price} = await axios.get(cgTokenPriceUrl);
+        const { data: price } = await axios.get(cgTokenPriceUrl);
         await this.cacheStorage.set("cgPrices", JSON.stringify(price.prices));
     }
 }

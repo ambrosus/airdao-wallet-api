@@ -14,7 +14,7 @@ export class WatcherRepository {
     }
 
     async getWatcher(pushToken: string): Promise<Watcher | null> {
-        return this.watcherModel.findOne({pushToken});
+        return this.watcherModel.findOne({ pushToken });
     }
 
     async getWatcherWithTxNotifications(id: string) {
@@ -22,7 +22,7 @@ export class WatcherRepository {
     }
 
     async getWatcherByDeviceId(deviceId: string): Promise<Watcher | null> {
-        return this.watcherModel.findOne({deviceId});
+        return this.watcherModel.findOne({ deviceId });
     }
 
     async createWatcher(watcher: Watcher) {

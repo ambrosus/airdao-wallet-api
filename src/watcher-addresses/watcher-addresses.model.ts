@@ -10,7 +10,7 @@ const watcherAddressModel = new Schema<WatcherAddress>(
     {
         watcherId: { type: String, required: true },
         address: { type: String, required: true },
-        lastTx: { type: String, required: true }
+        lastTx: { type: String, required: false }
     },
     {
         timestamps: true,

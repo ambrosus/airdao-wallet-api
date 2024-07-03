@@ -10,4 +10,8 @@ export class HistoricalNotificationsService {
     async getHistoricalNotifications(watcherId: string) {
         return this.repository.getHistoricalNotifications(watcherId);
     }
+
+    async addHistoricalNotification(watcherId: string, notification: Record<string, unknown>) {
+        return this.repository.addHistoricalNotification(watcherId, notification);
+    }
 }

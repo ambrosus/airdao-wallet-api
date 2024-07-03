@@ -18,15 +18,15 @@ export interface TransactionData {
 @singleton()
 export class ExplorerService {
     async initService() {
-        await axios.post(`${explorerUrl}/watch`, {"id": explorerToken, "action": "init", "url": callbackUrl});
+        await axios.post(`${explorerUrl}/watch`, { "id": explorerToken, "action": "init", "url": callbackUrl });
     }
 
     async subscribeAddresses(addresses: string[]) {
-        await axios.post(`${explorerUrl}/watch`, {"id": explorerToken, "addresses": addresses, "action": "subscribe"});
+        await axios.post(`${explorerUrl}/watch`, { "id": explorerToken, "addresses": addresses, "action": "subscribe" });
     }
 
     async unsubscribeAddresses(addresses: string[]) {
-        await axios.post(`${explorerUrl}/watch`, {"id": explorerToken, "addresses": addresses, "action": "unsubscribe"});
+        await axios.post(`${explorerUrl}/watch`, { "id": explorerToken, "addresses": addresses, "action": "unsubscribe" });
     }
 
     async getTransactionData(txHash: string): Promise<AxiosResponse<TransactionData>> {
@@ -34,7 +34,7 @@ export class ExplorerService {
     }
 
     async checkService() {
-        await axios.post(`${explorerUrl}/watch`, {"id": explorerToken, "action": "check"});
+        await axios.post(`${explorerUrl}/watch`, { "id": explorerToken, "action": "check" });
 
 // 		tries := 6
 // 		for {

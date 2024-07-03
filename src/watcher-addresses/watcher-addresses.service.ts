@@ -1,12 +1,16 @@
-import {singleton} from "tsyringe";
-import {WatcherAddressesRepository} from "./watcher-addresses.repository";
-import {Promise} from "mongoose";
+import { singleton } from "tsyringe";
+import { WatcherAddressesRepository } from "./watcher-addresses.repository";
+import { Promise } from "mongoose";
 
 
 @singleton()
 export class WatcherAddressesService {
 
     constructor(private readonly repository: WatcherAddressesRepository) {
+    }
+
+    async createWatcherAddress(watcherId: string, address: string) {
+        return this.repository.createWatcherAddress(watcherId, address);
     }
 
     async getWatcherAddresses(watcherId: string) {
@@ -20,6 +24,10 @@ export class WatcherAddressesService {
 
     async getWatcherIdsByAddress(address: string) {
         return this.repository.getWatcherIdsByAddress(address);
+    }
+
+    async updateWatcherAddress(watcherId: string, address: string, data: Record<string, unknown>) {
+        return this.repository.updateWatcherAddress(watcherId, address, data);
     }
 
     async deleteWatcherAddresses(watcherId: string, addresses: string[]) {

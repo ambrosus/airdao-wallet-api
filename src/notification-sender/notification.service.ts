@@ -1,4 +1,4 @@
-import {singleton} from "tsyringe";
+import { singleton } from "tsyringe";
 import * as admin from "firebase-admin";
 
 interface Notification {

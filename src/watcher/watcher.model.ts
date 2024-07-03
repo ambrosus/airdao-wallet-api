@@ -34,8 +34,8 @@ const watcherModel = new Schema<Watcher>(
             enum: ["ON", "OFF"],
             message: "priceNotification must be either ON or OFF.",
         },
-        lastSuccessDate: { type: Date, required: false },
-        lastFailDate: { type: Date, required: false },
+        lastSuccessDate: { type: Number, required: false },
+        lastFailDate: { type: Number, required: false },
     },
     {
         timestamps: true,

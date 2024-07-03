@@ -31,7 +31,7 @@ export class PriceWatcher {
 
             if (watcher.priceNotification === "ON") {
                 const title = "Price Alert";
-                const data = {type: "price-alert", percentage: roundedPercentage};
+                const data = { type: "price-alert", percentage: roundedPercentage };
                 let body;
                 
 
@@ -41,7 +41,7 @@ export class PriceWatcher {
                     body = `🔻 AMB Price changed on -${roundedPercentage}%! Current price $${roundedPrice}`;
                 }
 
-                await this.notificationService.sendNotification({title, body: body as unknown as string, pushToken: watcher.pushToken, data});
+                await this.notificationService.sendNotification({ title, body: body as unknown as string, pushToken: watcher.pushToken, data });
             }
             await this.watcherService.updateWatcherPrice(watcher.pushToken, Number(tokenPrice));
         }));

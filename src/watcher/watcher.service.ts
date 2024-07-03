@@ -1,12 +1,12 @@
 import Redis from "ioredis";
 import { singleton } from "tsyringe";
 import { Watcher } from "./watcher.model";
+import { explorerToken } from "../config";
 import { ExplorerService } from "../explorer";
 import { WatcherRepository } from "./watcher.repository";
 import { NotificationService } from "../notification-sender";
 import { WatcherAddressesService } from "../watcher-addresses";
 import { HistoricalNotificationsService } from "../historical-notifications";
-import {explorerToken} from "../config";
 
 @singleton()
 export class WatcherService {
@@ -26,12 +26,14 @@ export class WatcherService {
         const watcher =  await this.watcherRepository.getWatcher(encodedPushToken);
         if (!watcher) throw new Error("watcher not found");
 
-        const watcherAddresses = await this.watcherAddressesService.getWatcherAddressesWithDetails(watcher._id);
-        const historicalNotifications = await this.historicalNotificationsService.getHistoricalNotifications(watcher._id);
+        const [addresses, historicalNotifications] = await Promise.all([
+            this.watcherAddressesService.getWatcherAddressesWithDetails(watcher._id),
+            this.historicalNotificationsService.getHistoricalNotifications(watcher._id)
+        ]);
 
         return {
             ...watcher,
-            addresses: watcherAddresses,
+            addresses,
             historicalNotifications
         };
     }
@@ -74,38 +76,53 @@ export class WatcherService {
         } as unknown as Watcher);
     }
 
-    async updateWatcher(pushToken: string, updateFields: {addresses?: string[], threshold?: number, txNotification?: string, priceNotification?: string}) {
+    async updateWatcher(pushToken: string, updateFields: { addresses?: string[], threshold?: number, txNotification?: string, priceNotification?: string }) {
         const watcher = await this.watcherRepository.getWatcher(pushToken);
 
         if (!watcher) {
             throw new Error("watcher not found");
         }
 
-        const {addresses, threshold, txNotification, priceNotification} = updateFields;
+        const {
+            addresses,
+            threshold,
+            txNotification,
+            priceNotification
+        } = updateFields;
+
+        const updates: { [key: string]: unknown } = {};
 
         if (addresses && addresses.length > 0) {
             const watcherAddresses = await this.watcherAddressesService.getWatcherAddresses(watcher._id);
-            const uniqueAddresses = addresses.filter(address => watcherAddresses.includes(address)) || [];
+            const uniqueAddresses = addresses.filter(address => !watcherAddresses.includes(address));
 
             if (uniqueAddresses.length > 0) {
-                await this.explorerService.subscribeAddresses(uniqueAddresses);
-                await this.watcherRepository.updateWatcher({pushToken}, {addresses: uniqueAddresses});
+                await Promise.all([
+                    this.explorerService.subscribeAddresses(uniqueAddresses),
+                    ...uniqueAddresses.map(address => this.watcherAddressesService.createWatcherAddress(watcher._id, address))
+                ]);
+            } else {
+                throw new Error("400-No new addresses to add");
             }
-            else throw new Error("400-No new addresses to add");
         }
-        if (threshold) {
-            await this.watcherRepository.updateWatcher({pushToken}, {threshold});
+
+        if (threshold !== undefined) {
+            updates.threshold = threshold;
         }
-        if (txNotification) {
-            await this.watcherRepository.updateWatcher({pushToken}, {txNotification});
+        if (txNotification !== undefined) {
+            updates.txNotification = txNotification;
         }
-        if (priceNotification) {
-            await this.watcherRepository.updateWatcher({pushToken}, {priceNotification});
+        if (priceNotification !== undefined) {
+            updates.priceNotification = priceNotification;
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await this.watcherRepository.updateWatcher({ pushToken }, updates);
         }
     }
 
     async updateWatcherPrice(pushToken: string, price: number) {
-        await this.watcherRepository.updateWatcher({pushToken}, {tokenPrice: price});
+        await this.watcherRepository.updateWatcher({ pushToken }, { tokenPrice: price });
     }
 
     async deleteWatcher(pushToken: string) {
@@ -119,8 +136,11 @@ export class WatcherService {
         const watcherAddresses = await this.watcherAddressesService.getWatcherAddresses(watcher._id);
         if (watcherAddresses.length > 0) await this.explorerService.unsubscribeAddresses(watcherAddresses);
 
-        await this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id);
-        await this.watcherRepository.deleteWatcher({pushToken});
+        await Promise.all([
+            this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id),
+            this.watcherRepository.deleteWatcher({ pushToken })
+        ]);
+
     }
 
     async deleteWatcherAddresses(pushToken: string, addresses: string[]) {
@@ -136,8 +156,10 @@ export class WatcherService {
         const allowedAddresses = watcherAddresses.filter(address => addresses.includes(address));
 
         if (allowedAddresses.length > 0) {
-            await this.explorerService.unsubscribeAddresses(allowedAddresses);
-            await this.watcherAddressesService.deleteWatcherAddresses(watcher._id, allowedAddresses);
+            await Promise.all([
+                this.explorerService.unsubscribeAddresses(allowedAddresses),
+                this.watcherAddressesService.deleteWatcherAddresses(watcher._id, allowedAddresses)
+            ]);
         }
     }
 
@@ -152,7 +174,7 @@ export class WatcherService {
             throw new Error("watcher not found for device id or old push token");
         }
 
-        await this.watcherRepository.updateWatcher({pushToken: oldPushToken}, {pushToken: newPushToken, deviceId});
+        await this.watcherRepository.updateWatcher({ pushToken: oldPushToken }, { pushToken: newPushToken, deviceId });
     }
 
     async watcherCallback(id: string, items: { address: string, txHash: string }[]) {
@@ -166,60 +188,59 @@ export class WatcherService {
 
     async handleCallback(address: string, txHash: string) {
         const watcherIds = await this.watcherAddressesService.getWatcherIdsByAddress(address);
+        if (watcherIds.length === 0) return;
 
         const watchers = await this.watcherRepository.getAllWatchers({
             _id: { $in: watcherIds },
             txNotification: "ON"
         });
-        let cutFromAddress = "";
-        let cutToAddress = "";
-        let tokenSymbol = "";
+        if (watchers.length === 0) return;
 
-
-        const txDataResponse = await this.explorerService.getTransactionData(txHash) ;
+        const txDataResponse = await this.explorerService.getTransactionData(txHash);
         if (!txDataResponse || txDataResponse.data.data.length === 0) return;
+
         const { data: { data: [txData] } } = txDataResponse;
+        const { from, to, value, timestamp } = txData;
 
-        if (txData.from.length > 0 && txData.from !== "") {
-             cutFromAddress = `${txData.from.slice(0, 5)}...${txData.from.slice(-5)}`;
-        }
+        const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
-        if (txData.to.length > 0 && txData.to !== "") {
-             cutToAddress = `${txData.to.slice(0, 5)}...${txData.to.slice(-5)}`;
-        }
+        const roundedAmount = Number(value.ether).toFixed(2);
+        const tokenSymbol = value.symbol || (value.symbol === "" ? "HPT" : "AMB");
 
-        const roundedAmount = Number(txData.value.ether).toFixed(2);
-
-        if (!txData.value.symbol) {
-            tokenSymbol = "AMB";
-        } else if (txData.value.symbol === "") {
-            tokenSymbol = "HPT";
-        }
-        else {
-            tokenSymbol = txData.value.symbol;
-        }
         const data = {
             type: "transaction-alert",
-            timestamp: txData.timestamp,
-            sender: cutFromAddress,
-            to: cutToAddress,
+            timestamp,
+            sender: cutAddress(from),
+            to: cutAddress(to),
             amount: roundedAmount,
             symbol: tokenSymbol
         };
 
-        for (const watcher of watchers) {
+        const notifications = watchers.map(async (watcher) => {
             const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
             const title = "AMB-Net Tx Alert";
-            const body = `From: ${ cutFromAddress }\nTo: ${ cutToAddress }\nAmount: ${ roundedAmount } ${ tokenSymbol }`;
+            const body = `From: ${cutAddress(from)}\nTo: ${cutAddress(to)}\nAmount: ${roundedAmount} ${tokenSymbol}`;
 
             try {
                 await this.notificationService.sendNotification({ title, body, pushToken: decodedPushToken, data });
+                await this.watcherRepository.updateWatcher({ _id: watcher._id }, { lastSuccessDate: Date.now() });
             } catch (error) {
-                if ((error as Error).message === "http error status: 404; reason: app instance has been unregistered; code: registration-token-not-registered; details: Requested entity was not found.") {
+                if ((error as Error).message.includes("code: registration-token-not-registered")) {
                     await this.watcherRepository.updateWatcher({ _id: watcher._id }, { lastFailDate: Date.now() });
                 }
             }
-        }
 
+            await Promise.all([
+                this.historicalNotificationsService.addHistoricalNotification(watcher._id, {
+                    title,
+                    body,
+                    sent: true,
+                    timestamp: Date.now()
+                }),
+                this.watcherAddressesService.updateWatcherAddress(watcher._id, address, { txHash })
+            ]);
+        });
+
+        await Promise.all(notifications);
     }
 }

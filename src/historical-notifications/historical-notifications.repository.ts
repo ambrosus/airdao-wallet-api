@@ -10,4 +10,8 @@ export class HistoricalNotificationsRepository {
     async getHistoricalNotifications(watcherId: string) {
         return this.model.find({ watcherId }).select("-watcherId");
     }
+
+    async addHistoricalNotification(watcherId: string, notification: Record<string, unknown>) {
+        return this.model.create({ watcherId, ...notification });
+    }
 }
