@@ -1,6 +1,6 @@
-import {singleton} from "tsyringe";
+import { singleton } from "tsyringe";
 import { Request, Response } from "express";
-import {WatcherService} from "./watcher.service";
+import { WatcherService } from "./watcher.service";
 
 
 @singleton()
@@ -81,6 +81,15 @@ export class WatcherNetwork {
             const {oldPushToken, newPushToken} = req.body;
             await this.service.updateWatcherPushToken(oldPushToken, newPushToken);
             res.json({ message: "Watcher push token updated" });
+        } catch (error) {
+            this.handleErrorResponse(res, error);
+        }
+    }
+
+    async watcherCallback(req: Request, res: Response): Promise<void> {
+        try {
+            const { id, items } = req.body;
+            await this.service.watcherCallback(id, items);
         } catch (error) {
             this.handleErrorResponse(res, error);
         }

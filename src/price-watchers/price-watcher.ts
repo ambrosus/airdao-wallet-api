@@ -1,19 +1,16 @@
+import Redis from "ioredis";
 import { CronJob } from "cron";
 import { singleton } from "tsyringe";
-import Redis from "ioredis";
-import { NotificationService } from "../notification-sender";
 import { WatcherService } from "../watcher";
+import { NotificationService } from "../notification-sender";
 
 @singleton()
 export class PriceWatcher {
-    private readonly cacheStorage: Redis;
-    private readonly watcherService: WatcherService;
-    private readonly notificationService: NotificationService;
-
-    constructor(cacheStorage: Redis, watcherService: WatcherService, notificationService: NotificationService) {
-        this.cacheStorage = cacheStorage;
-        this.watcherService = watcherService;
-        this.notificationService = notificationService;
+    constructor(
+        private readonly cacheStorage: Redis,
+        private readonly watcherService: WatcherService,
+        private readonly notificationService: NotificationService
+    ) {
     }
     async run() {
         const job = new CronJob("*/330 * * * * *", async () => this.watchPrice());

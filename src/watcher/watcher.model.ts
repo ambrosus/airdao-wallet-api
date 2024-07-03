@@ -7,7 +7,6 @@ export interface Watcher extends Document {
     tokenPrice?: number;
     txNotification: string;
     priceNotification: string;
-    addresses?: string[];
     lastSuccessDate?: number;
     lastFailDate?: number;
 }
@@ -35,9 +34,8 @@ const watcherModel = new Schema<Watcher>(
             enum: ["ON", "OFF"],
             message: "priceNotification must be either ON or OFF.",
         },
-        addresses: { type: [String], required: false },
-        lastSuccessDate: { type: Number, required: false },
-        lastFailDate: { type: Number, required: false },
+        lastSuccessDate: { type: Date, required: false },
+        lastFailDate: { type: Date, required: false },
     },
     {
         timestamps: true,

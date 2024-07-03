@@ -1,15 +1,12 @@
-import { CronJob } from "cron";
-import { singleton } from "tsyringe";
 import axios from "axios";
 import Redis from "ioredis";
+import { CronJob } from "cron";
+import { singleton } from "tsyringe";
 import { cgTokenPriceUrl } from "../config";
 
 @singleton()
 export class CgPriceWatcher {
-    private readonly cacheStorage: Redis;
-
-    constructor(cacheStorage: Redis) {
-        this.cacheStorage = cacheStorage;
+    constructor(private readonly cacheStorage: Redis) {
     }
     async run() {
         const job = new CronJob("0 */12 * * *", async () => this.watchCgPrice());

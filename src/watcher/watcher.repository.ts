@@ -1,4 +1,4 @@
-import {singleton} from "tsyringe";
+import { singleton } from "tsyringe";
 import { Watcher, WatcherModel } from "./watcher.model";
 
 @singleton()
@@ -9,12 +9,16 @@ export class WatcherRepository {
         this.watcherModel = watcherModel;
     }
 
-    async getAllWatchers(filter?: Record<string, string>) {
+    async getAllWatchers(filter?: Record<string, string | Record<string, unknown>>) {
         return this.watcherModel.find(filter!);
     }
 
     async getWatcher(pushToken: string): Promise<Watcher | null> {
         return this.watcherModel.findOne({pushToken});
+    }
+
+    async getWatcherWithTxNotifications(id: string) {
+        return this.watcherModel.findOne({ _id: id, txNotification: "ON" });
     }
 
     async getWatcherByDeviceId(deviceId: string): Promise<Watcher | null> {

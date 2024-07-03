@@ -1,6 +1,19 @@
-import axios from "axios";
-import {singleton} from "tsyringe";
+import { singleton } from "tsyringe";
+import axios, { AxiosResponse } from "axios";
 import { callbackUrl, explorerToken, explorerUrl } from "../config";
+
+export interface TransactionData {
+    data: {
+        value: {
+            wei: string,
+            ether: string,
+            symbol?: string
+        },
+        from: string,
+        to: string,
+        timestamp: string,
+    }[]
+}
 
 @singleton()
 export class ExplorerService {
@@ -16,7 +29,13 @@ export class ExplorerService {
         await axios.post(`${explorerUrl}/watch`, {"id": explorerToken, "addresses": addresses, "action": "unsubscribe"});
     }
 
+    async getTransactionData(txHash: string): Promise<AxiosResponse<TransactionData>> {
+        return await axios.get(`${explorerUrl}/transactions/${txHash}`);
+    }
+
     async checkService() {
+        await axios.post(`${explorerUrl}/watch`, {"id": explorerToken, "action": "check"});
+
 // 		tries := 6
 // 		for {
 // 			req.Reset()

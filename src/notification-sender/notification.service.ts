@@ -1,19 +1,27 @@
-import * as admin from "firebase-admin";
 import {singleton} from "tsyringe";
+import * as admin from "firebase-admin";
+
+interface Notification {
+    title: string;
+    body: string;
+    pushToken: string;
+    data: Record<string, unknown>;
+}
 
 @singleton()
 export class NotificationService  {
-    private readonly fcmClient: admin.messaging.Messaging;
-    private readonly androidChannel: string;
 
-    constructor(fcmClient: admin.messaging.Messaging, androidChannel: string) {
-        this.fcmClient = fcmClient;
-        this.androidChannel = androidChannel;
-    }
+    constructor(
+        private readonly fcmClient: admin.messaging.Messaging,
+        private readonly androidChannel: string
+    ) {}
 
-    async sendNotification(
-        {title, body, pushToken, data}: {title: string, body: string, pushToken: string, data: Record<string, unknown>}
-    ): Promise<string | null> {
+    async sendNotification({
+            title,
+            body,
+            pushToken,
+            data
+        }: Notification ): Promise<string | null> {
         const androidData: Record<string, string> = {};
         Object.entries(data).forEach(([key, value]) => {
             switch (typeof value) {
@@ -31,9 +39,6 @@ export class NotificationService  {
                     break;
             }
         });
-
-        console.log("AndroidData:", androidData);
-        console.log("IOSData:", data);
 
         const message = {
             notification: {

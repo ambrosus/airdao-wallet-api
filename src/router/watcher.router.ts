@@ -1,6 +1,5 @@
-import { Application } from "express";
 import { container } from "tsyringe";
-
+import { Application } from "express";
 import { WatcherNetwork } from "../watcher";
 
 const watcherNetwork = container.resolve(WatcherNetwork);
@@ -36,10 +35,10 @@ const routes = (app: Application) => {
         watcherNetwork.deleteWatcherAddresses.bind(watcherNetwork)
     );
 
-    // app.post(
-    //     "/explorer-callback",
-    //     watcherNetwork.watcherCallback.bind(watcherNetwork)
-    // );
+    app.post(
+        "/explorer-callback",
+        watcherNetwork.watcherCallback.bind(watcherNetwork)
+    );
 
     app.put(
         "/push-token",
