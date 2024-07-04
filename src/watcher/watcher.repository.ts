@@ -3,37 +3,35 @@ import { Watcher, WatcherModel } from "./watcher.model";
 
 @singleton()
 export class WatcherRepository {
-    private readonly watcherModel: typeof WatcherModel;
 
-    constructor(watcherModel: typeof WatcherModel) {
-        this.watcherModel = watcherModel;
+    constructor() {
     }
 
     async getAllWatchers(filter?: Record<string, string | Record<string, unknown>>) {
-        return this.watcherModel.find(filter!);
+        return WatcherModel.find(filter!);
     }
 
     async getWatcher(pushToken: string): Promise<Watcher | null> {
-        return this.watcherModel.findOne({ pushToken });
+        return WatcherModel.findOne({ pushToken });
     }
 
     async getWatcherWithTxNotifications(id: string) {
-        return this.watcherModel.findOne({ _id: id, txNotification: "ON" });
+        return WatcherModel.findOne({ _id: id, txNotification: "ON" });
     }
 
     async getWatcherByDeviceId(deviceId: string): Promise<Watcher | null> {
-        return this.watcherModel.findOne({ deviceId });
+        return WatcherModel.findOne({ deviceId });
     }
 
     async createWatcher(watcher: Watcher) {
-        await this.watcherModel.create(watcher);
+        await WatcherModel.create(watcher);
     }
 
     async updateWatcher(filter: Record<string, string>, update: Record<string, unknown>) {
-        return this.watcherModel.findOneAndUpdate(filter, update);
+        return WatcherModel.findOneAndUpdate(filter, update);
     }
 
     async deleteWatcher(filer: Record<string, string>) {
-        return this.watcherModel.deleteOne(filer);
+        return WatcherModel.deleteOne(filer);
     }
 }

@@ -10,7 +10,6 @@ interface Notification {
 
 @singleton()
 export class NotificationService  {
-
     constructor(
         private readonly fcmClient: admin.messaging.Messaging,
         private readonly androidChannel: string

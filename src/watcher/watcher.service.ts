@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import { singleton } from "tsyringe";
+
 import { Watcher } from "./watcher.model";
 import { ExplorerService } from "../explorer";
 import { explorerToken, ONE_DAY_IN_MS } from "../config";

@@ -1,10 +1,13 @@
-import { container } from "tsyringe";
+import { DependencyContainer } from "tsyringe";
 import { Application } from "express";
 import { WatcherNetwork } from "../watcher";
 
-const watcherNetwork = container.resolve(WatcherNetwork);
 
-const routes = (app: Application) => {
+
+const routes = (app: Application, container: DependencyContainer) => {
+
+    const watcherNetwork = container.resolve(WatcherNetwork);
+    
     app.get(
         "/api/v1/watcher/:token",
         watcherNetwork.getWatcher.bind(watcherNetwork)

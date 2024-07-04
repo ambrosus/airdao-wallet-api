@@ -4,43 +4,43 @@ import { WatcherAddressModel } from "./watcher-addresses.model";
 
 @singleton()
 export class WatcherAddressesRepository {
-    constructor(private readonly model: typeof WatcherAddressModel) {
+    constructor() {
     }
 
     async createWatcherAddress(watcherId: string, address: string) {
-        return this.model.create({ watcherId, address });
+        return WatcherAddressModel.create({ watcherId, address });
     }
 
     async getAllWatchersAddresses(filter: Record<string, unknown>) {
-        return this.model.find(filter);
+        return WatcherAddressModel.find(filter);
     }
 
     async getWatcherAddresses(watcherId: string) {
-        return this.model.find({ watcherId }).select("-watcherId");
+        return WatcherAddressModel.find({ watcherId }).select("-watcherId");
     }
 
     async getWatcherAddress(watcherId: string, address: string) {
-        return this.model.findOne({ watcherId, address });
+        return WatcherAddressModel.findOne({ watcherId, address });
     }
 
     async getUniqueAddresses() {
-        return this.model.distinct("address").exec();
+        return WatcherAddressModel.distinct("address").exec();
     }
 
     async getWatcherIdsByAddress(address: string) {
-        return this.model.find({ address }).distinct("watcherId");
+        return WatcherAddressModel.find({ address }).distinct("watcherId");
     }
 
     async updateWatcherAddress(watcherId: string, address: string, data: Record<string, unknown>) {
-        return this.model.updateOne({ watcherId, address }, data);
+        return WatcherAddressModel.updateOne({ watcherId, address }, data);
     }
 
     async deleteWatcherAddress(watcherId: string, address: string) {
-        return this.model.deleteOne({ watcherId, address });
+        return WatcherAddressModel.deleteOne({ watcherId, address });
     }
 
     async deleteWatcherAddresses(watcherId: string) {
-        return this.model.deleteMany({ watcherId });
+        return WatcherAddressModel.deleteMany({ watcherId });
     }
 
 }
