@@ -3,13 +3,14 @@ import Redis from "ioredis";
 import * as admin from "firebase-admin";
 import { container, DependencyContainer } from "tsyringe";
 
-import { androidChannel, redisUrl } from "../config";
 import { ExplorerService } from "../explorer";
+import { androidChannel, redisUrl } from "../config";
 import { NotificationService } from "../notification-sender";
-import { WatcherAddressesRepository, WatcherAddressesService } from "../watcher-addresses";
 import { WatcherRepository, WatcherService } from "../watcher";
-import { HistoricalNotificationsService } from "../historical-notifications";
+import { WatcherAddressesService } from "../watcher-addresses";
 import { ApiPriceWatcher, CgPriceWatcher } from "../price-watchers";
+import { HistoricalNotificationsService } from "../historical-notifications";
+
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const serviceAccount = require("../../service-account.json");
