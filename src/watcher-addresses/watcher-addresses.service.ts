@@ -13,6 +13,14 @@ export class WatcherAddressesService {
         return this.repository.createWatcherAddress(watcherId, address);
     }
 
+    async getAllWatchersAddresses(filter: Record<string, unknown>) {
+        return this.repository.getAllWatchersAddresses(filter);
+    }
+
+    async getUniqueAddresses() {
+        return this.repository.getUniqueAddresses();
+    }
+
     async getWatcherAddresses(watcherId: string) {
         const watcherAddressesDoc =  await this.repository.getWatcherAddresses(watcherId);
         return watcherAddressesDoc.map(addressDoc => addressDoc.address);

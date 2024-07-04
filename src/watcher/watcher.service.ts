@@ -245,4 +245,12 @@ export class WatcherService {
 
         await Promise.all(notifications);
     }
+
+    async subscribeToExplorer() {
+        const addresses = await this.watcherAddressesService.getUniqueAddresses();
+
+        if (addresses.length === 0) return;
+
+        await this.explorerService.subscribeAddresses(addresses);
+    }
 }

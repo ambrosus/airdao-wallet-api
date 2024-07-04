@@ -33,26 +33,28 @@ export class ExplorerService {
         return await axios.get(`${explorerUrl}/transactions/${txHash}`);
     }
 
-    async checkService() {
-        await axios.post(`${explorerUrl}/watch`, { "id": explorerToken, "action": "check" });
 
-// 		tries := 6
-// 		for {
-// 			req.Reset()
-// 			req.WriteString("{\"id\":\"")
-// 			req.WriteString(s.explorerToken)
-// 			req.WriteString("\",\"action\":\"check\"}")
-// 			if err := s.doRequest(fmt.Sprintf("%s/watch", s.explorerUrl), &req, nil); err != nil {
-// 				s.logger.Errorln(err)
-// 				if tries != 0 {
-// 					tries--
-// 					time.Sleep(5 * time.Second)
-// 					continue
-// 				}
-// 				break
-// 			}
-// 			time.Sleep(30 * time.Second)
-// 			tries = 6
-// 		}
+    async checkService() {
+        const maxRetries = 6;
+
+        const attempt = async (retries: number): Promise<void> => {
+            try {
+                await axios.post(`${explorerUrl}/watch`, { "id": explorerToken, "action": "check" });
+                await this.sleep(30000);
+                await attempt(maxRetries);
+            } catch (error) {
+                console.error(error);
+                if (retries > 0) {
+                    await this.sleep(5000);
+                    await attempt(retries - 1);
+                }
+            }
+        };
+
+        await attempt(maxRetries);
+    }
+
+    async sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }

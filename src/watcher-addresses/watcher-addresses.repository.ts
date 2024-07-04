@@ -11,12 +11,20 @@ export class WatcherAddressesRepository {
         return this.model.create({ watcherId, address });
     }
 
+    async getAllWatchersAddresses(filter: Record<string, unknown>) {
+        return this.model.find(filter);
+    }
+
     async getWatcherAddresses(watcherId: string) {
         return this.model.find({ watcherId }).select("-watcherId");
     }
 
     async getWatcherAddress(watcherId: string, address: string) {
         return this.model.findOne({ watcherId, address });
+    }
+
+    async getUniqueAddresses() {
+        return this.model.distinct("address").exec();
     }
 
     async getWatcherIdsByAddress(address: string) {
