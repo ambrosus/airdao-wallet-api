@@ -10,3 +10,5 @@ export const cgTokenPriceUrl = env.CG_TOKEN_PRICE_URL as string;
 export const explorerToken = env.EXPLORER_TOKEN as string;
 export const explorerUrl = env.EXPLORER_URL as string;
 export const callbackUrl = env.CALLBACK_URL as string;
+
+export const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;

@@ -6,42 +6,42 @@ const watcherNetwork = container.resolve(WatcherNetwork);
 
 const routes = (app: Application) => {
     app.get(
-        "/watcher/:token",
+        "/api/v1/watcher/:token",
         watcherNetwork.getWatcher.bind(watcherNetwork)
     );
 
     app.get(
-        "/watcher-historical-prices",
+        "/api/v1/watcher-historical-prices",
         watcherNetwork.getWatcherHistoricalPrices.bind(watcherNetwork)
     );
 
     app.post(
-        "/watcher",
+        "/api/v1/watcher",
         watcherNetwork.createWatcher.bind(watcherNetwork)
     );
 
     app.put(
-        "/watcher",
+        "/api/v1/watcher",
         watcherNetwork.updateWatcher.bind(watcherNetwork)
     );
 
     app.delete(
-        "/watcher",
+        "/api/v1/watcher",
         watcherNetwork.deleteWatcher.bind(watcherNetwork)
     );
 
     app.delete(
-        "/watcher-addresses",
+        "/api/v1/watcher-addresses",
         watcherNetwork.deleteWatcherAddresses.bind(watcherNetwork)
     );
 
     app.post(
-        "/explorer-callback",
+        "/api/v1/explorer-callback",
         watcherNetwork.watcherCallback.bind(watcherNetwork)
     );
 
     app.put(
-        "/push-token",
+        "/api/v1/push-token",
         watcherNetwork.updateWatcherPushToken.bind(watcherNetwork)
     );
 };

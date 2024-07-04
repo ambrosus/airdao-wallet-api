@@ -1,8 +1,8 @@
 import Redis from "ioredis";
 import { singleton } from "tsyringe";
 import { Watcher } from "./watcher.model";
-import { explorerToken } from "../config";
 import { ExplorerService } from "../explorer";
+import { explorerToken, ONE_DAY_IN_MS } from "../config";
 import { WatcherRepository } from "./watcher.repository";
 import { NotificationService } from "../notification-sender";
 import { WatcherAddressesService } from "../watcher-addresses";
@@ -19,32 +19,6 @@ export class WatcherService {
         private readonly watcherAddressesService: WatcherAddressesService,
         private readonly historicalNotificationsService: HistoricalNotificationsService,
     ) {}
-
-    async getWatcher(pushToken: string) {
-        const encodedPushToken = Buffer.from(pushToken).toString("base64");
-
-        const watcher =  await this.watcherRepository.getWatcher(encodedPushToken);
-        if (!watcher) throw new Error("watcher not found");
-
-        const [addresses, historicalNotifications] = await Promise.all([
-            this.watcherAddressesService.getWatcherAddressesWithDetails(watcher._id),
-            this.historicalNotificationsService.getHistoricalNotifications(watcher._id)
-        ]);
-
-        return {
-            ...watcher,
-            addresses,
-            historicalNotifications
-        };
-    }
-
-    async getAllWatchers(filter?: Record<string, string>) {
-        return await this.watcherRepository.getAllWatchers(filter);
-    }
-
-    async getWatcherHistoryPrices() {
-        return this.cacheStorage.get("cgPrices");
-    }
 
     async createWatcher(pushToken: string, deviceId?: string) {
         const encodedPushToken = Buffer.from(pushToken).toString("base64");
@@ -74,6 +48,32 @@ export class WatcherService {
             tokenPrice: Number(tokenPrice),
             deviceId,
         } as unknown as Watcher);
+    }
+
+    async getWatcher(pushToken: string) {
+        const encodedPushToken = Buffer.from(pushToken).toString("base64");
+
+        const watcher =  await this.watcherRepository.getWatcher(encodedPushToken);
+        if (!watcher) throw new Error("watcher not found");
+
+        const [addresses, historicalNotifications] = await Promise.all([
+            this.watcherAddressesService.getWatcherAddressesWithDetails(watcher._id),
+            this.historicalNotificationsService.getHistoricalNotifications(watcher._id)
+        ]);
+
+        return {
+            ...watcher,
+            addresses,
+            historicalNotifications
+        };
+    }
+
+    async getAllWatchers(filter?: Record<string, string>) {
+        return await this.watcherRepository.getAllWatchers(filter);
+    }
+
+    async getWatcherHistoryPrices() {
+        return this.cacheStorage.get("cgPrices");
     }
 
     async updateWatcher(pushToken: string, updateFields: { addresses?: string[], threshold?: number, txNotification?: string, priceNotification?: string }) {
@@ -127,6 +127,20 @@ export class WatcherService {
         await this.watcherRepository.updateWatcher({ pushToken }, { tokenPrice: price });
     }
 
+    async updateWatcherPushToken(oldPushToken: string, newPushToken: string, deviceId?: string) {
+        const encodedOldPushToken = Buffer.from(oldPushToken).toString("base64");
+
+        let watcher;
+        if (deviceId) watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
+        else watcher = await this.watcherRepository.getWatcher(encodedOldPushToken);
+
+        if (!watcher) {
+            throw new Error("watcher not found for device id or old push token");
+        }
+
+        await this.watcherRepository.updateWatcher({ pushToken: oldPushToken }, { pushToken: newPushToken, deviceId });
+    }
+
     async deleteWatcher(pushToken: string) {
         const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
@@ -165,18 +179,25 @@ export class WatcherService {
         }
     }
 
-    async updateWatcherPushToken(oldPushToken: string, newPushToken: string, deviceId?: string) {
-        const encodedOldPushToken = Buffer.from(oldPushToken).toString("base64");
+    async deleteWatchersWithStaleData() {
+        const watchers = await this.watcherRepository.getAllWatchers({
+            lastSuccessDate: {
+                $lt: new Date(Date.now() - 7 * ONE_DAY_IN_MS)
+            }
+        });
 
-        let watcher;
-        if (deviceId) watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
-        else watcher = await this.watcherRepository.getWatcher(encodedOldPushToken);
+        if (watchers.length === 0) return;
 
-        if (!watcher) {
-            throw new Error("watcher not found for device id or old push token");
+        const deletions = [];
+        for (const watcher of watchers) {
+            deletions.push(
+                Promise.all([
+                    this.watcherRepository.deleteWatcher({ _id: watcher._id }),
+                    this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id)
+                ])
+            );
         }
-
-        await this.watcherRepository.updateWatcher({ pushToken: oldPushToken }, { pushToken: newPushToken, deviceId });
+        await Promise.all(deletions);
     }
 
     async watcherCallback(id: string, items: { address: string, txHash: string }[]) {

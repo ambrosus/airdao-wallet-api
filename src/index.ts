@@ -1,13 +1,15 @@
 import cors from "cors";
 import Redis from "ioredis";
-import express from "express";
 import mongoose from "mongoose";
 import { container } from "tsyringe";
+import express, { Request, Response } from "express";
+
 import { setupRoutes } from "./router";
-import { dbUrl, redisUrl } from "./config";
 import { WatcherService } from "./watcher";
-import { CgPriceWatcher, ApiPriceWatcher } from "./price-watchers";
 import { ExplorerService } from "./explorer";
+import { dbUrl, ONE_DAY_IN_MS, redisUrl } from "./config";
+import { CgPriceWatcher, ApiPriceWatcher } from "./price-watchers";
+
 
 
 async function main() {
@@ -22,6 +24,10 @@ async function main() {
     app.use(cors());
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+    app.use((req: Request, res: Response, next) => {
+        res.setHeader("X-Custom-Header", "AIRDAO-Mobile-Api");
+        next();
+    });
 
     setupRoutes(app);
 
@@ -30,6 +36,12 @@ async function main() {
 
     const cgPriceWatcher = container.resolve(CgPriceWatcher);
     const apiPriceWatcher = container.resolve(ApiPriceWatcher);
+
+    // Run deleteWatchersWithStaleData every 24 hours for check and delete stale data
+    setInterval(
+        async () => await watcherService.deleteWatchersWithStaleData(),
+        ONE_DAY_IN_MS
+    );
 
     await Promise.all([
         cgPriceWatcher.run(),
