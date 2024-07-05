@@ -4,7 +4,7 @@ import * as admin from "firebase-admin";
 import { container, DependencyContainer } from "tsyringe";
 
 import { ExplorerService } from "../explorer";
-import { androidChannel, redisUrl } from "../config";
+import { androidChannel, firebaseCredPath, redisUrl } from "../config";
 import { NotificationService } from "../notification-sender";
 import { WatcherRepository, WatcherService } from "../watcher";
 import { WatcherAddressesService } from "../watcher-addresses";
@@ -13,7 +13,7 @@ import { HistoricalNotificationsService } from "../historical-notifications";
 
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const serviceAccount = require("../../service-account.json");
+const serviceAccount = require(firebaseCredPath);
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)

@@ -5,6 +5,7 @@ dotenv.config();
 
 export const dbUrl = process.env.MONGO_DB_URL as string;
 export const redisUrl = process.env.REDIS_URL as string;
+export const firebaseCredPath = process.env.FIREBASE_CRED_PATH as string;
 export const tokenPriceUrl = env.TOKEN_PRICE_URL as string;
 export const cgTokenPriceUrl = env.CG_TOKEN_PRICE_URL as string;
 export const explorerToken = env.EXPLORER_TOKEN as string;

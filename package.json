@@ -43,6 +43,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "nodemon": "^3.0.1",
-    "sinon": "^17.0.1"
+    "sinon": "^17.0.1",
+    "ts-node": "^10.9.1"
   }
 }
