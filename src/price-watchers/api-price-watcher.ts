@@ -16,6 +16,7 @@ export class ApiPriceWatcher {
 
     private async watchApiPrice() {
         const { data: { data: { price_usd: price } } } = await axios.get(tokenPriceUrl);
+        console.log("setting api price, ", { price });
         await this.cacheStorage.set("apiPrice", Number(price));
     }
 }
