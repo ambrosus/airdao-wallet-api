@@ -5,10 +5,10 @@ import mongoose from "mongoose";
 
 import { setupRoutes } from "./router";
 import { WatcherService } from "./watcher";
-import { ExplorerService } from "./explorer";
 import { createContainer } from "./common";
+import { ExplorerService } from "./explorer";
 import { appPort, dbUrl, ONE_DAY_IN_MS } from "./config";
-import { CgPriceWatcher, ApiPriceWatcher } from "./price-watchers";
+import { CgPriceWatcher, ApiPriceWatcher, PriceWatcher } from "./price-watchers";
 
 async function main() {
     if (!dbUrl) {
@@ -32,6 +32,7 @@ async function main() {
 
     const cgPriceWatcher = container.resolve(CgPriceWatcher);
     const apiPriceWatcher = container.resolve(ApiPriceWatcher);
+    const priceWatcher = container.resolve(PriceWatcher);
 
     // Run deleteWatchersWithStaleData every 24 hours for check and delete stale data
     setInterval(
@@ -43,7 +44,8 @@ async function main() {
         cgPriceWatcher.run(),
         apiPriceWatcher.run(),
         watcherService.subscribeToExplorer(),
-        explorerService.checkService()
+        explorerService.checkService(),
+        priceWatcher.run()
     ]);
 
     app.listen(appPort, () => {

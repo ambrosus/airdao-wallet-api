@@ -4,12 +4,13 @@ import * as admin from "firebase-admin";
 import { container, DependencyContainer } from "tsyringe";
 
 import { ExplorerService } from "../explorer";
-import { androidChannel, firebaseCredPath, redisUrl } from "../config";
 import { NotificationService } from "../notification-sender";
 import { WatcherRepository, WatcherService } from "../watcher";
 import { WatcherAddressesService } from "../watcher-addresses";
-import { ApiPriceWatcher, CgPriceWatcher } from "../price-watchers";
+import { androidChannel, firebaseCredPath, redisUrl } from "../config";
 import { HistoricalNotificationsService } from "../historical-notifications";
+import { ApiPriceWatcher, CgPriceWatcher, PriceWatcher } from "../price-watchers";
+
 
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -57,6 +58,14 @@ export const createContainer = async (): Promise<DependencyContainer> => {
         container.resolve(HistoricalNotificationsService)
     );
     container.register<WatcherService>(WatcherService, { useValue: watcherService });
+
+    const priceWatcher = new PriceWatcher(
+        container.resolve("Redis"),
+        container.resolve(WatcherService),
+        container.resolve(NotificationService)
+    );
+
+    container.register<PriceWatcher>(PriceWatcher, { useValue: priceWatcher });
 
     return container;
 };
