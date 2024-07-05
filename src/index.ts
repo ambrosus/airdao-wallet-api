@@ -31,7 +31,9 @@ async function main() {
     console.log("Routes are set up");
 
     const watcherService = container.resolve(WatcherService);
+    console.log("Watcher service resolved");
     const explorerService = container.resolve(ExplorerService);
+    console.log("Explorer service resolved");
     await explorerService.initService();
     console.log("Explorer service initiated");
 
