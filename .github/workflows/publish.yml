@@ -6,6 +6,7 @@ on:
       - master
       - dev
       - db-migration
+      - rewrite
 
 env:
   REGISTRY: ghcr.io
