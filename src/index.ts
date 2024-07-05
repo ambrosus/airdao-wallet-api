@@ -16,19 +16,24 @@ async function main() {
     }
 
     const container = await createContainer();
+    console.log("Container created");
 
     await mongoose.connect(dbUrl);
+    console.log("DB connected");
 
     const app = express();
     app.use(cors());
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+    console.log("App created");
 
     setupRoutes(app, container);
+    console.log("Routes are set up");
 
     const watcherService = container.resolve(WatcherService);
     const explorerService = container.resolve(ExplorerService);
     await explorerService.initService();
+    console.log("Explorer service initiated");
 
     const cgPriceWatcher = container.resolve(CgPriceWatcher);
     const apiPriceWatcher = container.resolve(ApiPriceWatcher);
@@ -39,6 +44,7 @@ async function main() {
         async () => await watcherService.deleteWatchersWithStaleData(),
         ONE_DAY_IN_MS
     );
+    console.log("Watchers with stale data deleted");
 
     await Promise.all([
         cgPriceWatcher.run(),
