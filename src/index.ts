@@ -61,4 +61,4 @@ async function main() {
     });
 }
 
-main().then((res) => console.log(res));
+main().then(() => console.log("App is started"));
