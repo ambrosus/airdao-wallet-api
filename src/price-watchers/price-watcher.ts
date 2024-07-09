@@ -18,6 +18,7 @@ export class PriceWatcher {
     }
 
     private async watchPrice() {
+        console.log("Watching Price");
         const watchers = await this.watcherService.getAllWatchers({ priceNotification: "ON" });
         await Promise.all(watchers.map(async (watcher) => {
             const tokenPrice = await this.cacheStorage.get("apiPrice");

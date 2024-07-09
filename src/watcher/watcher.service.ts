@@ -269,6 +269,7 @@ export class WatcherService {
     }
 
     async subscribeToExplorer() {
+        console.log("Subscribing to explorer...");
         const addresses = await this.watcherAddressesService.getUniqueAddresses();
 
         if (addresses.length === 0) return;

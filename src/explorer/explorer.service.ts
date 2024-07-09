@@ -35,6 +35,7 @@ export class ExplorerService {
 
 
     async checkService() {
+        console.log("Checking service");
         const maxRetries = 6;
 
         const attempt = async (retries: number): Promise<void> => {
