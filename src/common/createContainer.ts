@@ -29,8 +29,7 @@ export const createContainer = async (): Promise<DependencyContainer> => {
 
     const explorerService = container.resolve(ExplorerService);
     container.register<ExplorerService>(ExplorerService, { useValue: explorerService });
-
-
+    
     const watcherRepository = container.resolve(WatcherRepository);
     container.register<WatcherRepository>(WatcherRepository, { useValue: watcherRepository });
 

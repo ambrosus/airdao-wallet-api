@@ -14,6 +14,7 @@ export class WatcherNetwork {
     async getWatcher(req: Request, res: Response): Promise<void> {
         try {
             const { pushToken } = req.params;
+            console.log("Push token", pushToken);
             const watcher = await this.service.getWatcher(pushToken);
             res.json(watcher);
         } catch (error) {

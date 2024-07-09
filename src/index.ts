@@ -7,7 +7,7 @@ import { setupRoutes } from "./router";
 import { WatcherService } from "./watcher";
 import { createContainer } from "./common";
 import { ExplorerService } from "./explorer";
-import { appPort, dbUrl, ONE_DAY_IN_MS } from "./config";
+import { appPort, dbUrl } from "./config";
 import { CgPriceWatcher, ApiPriceWatcher, PriceWatcher } from "./price-watchers";
 
 async function main() {

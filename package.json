@@ -13,14 +13,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ambrosus/airdao-wallet-ap.git"
+    "url": "git+https://github.com/ambrosus/airdao-wallet-api.git"
   },
-  "author": "ICN4",
+  "author": "INC4",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ambrosus/airdao-wallet-ap/issues"
+    "url": "https://github.com/ambrosus/airdao-wallet-api/issues"
   },
-  "homepage": "https://github.com/ambrosus/airdao-wallet-ap#readme",
+  "homepage": "https://github.com/ambrosus/airdao-wallet-api#readme",
   "dependencies": {
     "@typescript-eslint/eslint-plugin": "^5.54.1",
     "@typescript-eslint/parser": "^5.54.1",

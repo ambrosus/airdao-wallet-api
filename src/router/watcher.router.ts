@@ -9,7 +9,7 @@ const routes = (app: Application, container: DependencyContainer) => {
     const watcherNetwork = container.resolve(WatcherNetwork);
     
     app.get(
-        "/api/v1/watcher/:token",
+        "/api/v1/watcher/:pushToken",
         watcherNetwork.getWatcher.bind(watcherNetwork)
     );
 
