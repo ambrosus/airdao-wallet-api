@@ -24,7 +24,7 @@ const routes = (app: Application, container: DependencyContainer) => {
     );
 
     app.put(
-        "/api/v1/watcher",
+        "/api/v1/watcher/:pushToken",
         watcherNetwork.updateWatcher.bind(watcherNetwork)
     );
 
