@@ -112,14 +112,19 @@ export class WatcherService {
         }
 
         if (threshold !== undefined) {
+            console.log("threshold", threshold);
             updates.threshold = threshold;
         }
         if (txNotification !== undefined) {
+            console.log("txNotification", txNotification);
             updates.txNotification = txNotification;
         }
         if (priceNotification !== undefined) {
+            console.log("priceNotification", priceNotification);
             updates.priceNotification = priceNotification;
         }
+
+        console.log("Updates", updates);
 
         if (Object.keys(updates).length > 0) {
             await this.watcherRepository.updateWatcher({ pushToken }, updates);

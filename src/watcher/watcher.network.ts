@@ -45,6 +45,7 @@ export class WatcherNetwork {
         try {
             const { pushToken } = req.params;
             const { threshold, txNotification, priceNotification, addresses } = req.body;
+            console.log("UPDATE", { pushToken, threshold, txNotification, priceNotification, addresses });
             await this.service.updateWatcher(pushToken, {
                 addresses,
                 threshold,
