@@ -37,28 +37,28 @@ async function main() {
     await explorerService.initService();
     console.log("Explorer service initiated");
 
+    app.listen(appPort, () => {
+        console.log(`Server is running on port ${appPort}`);
+    });
+
     const cgPriceWatcher = container.resolve(CgPriceWatcher);
     const apiPriceWatcher = container.resolve(ApiPriceWatcher);
     const priceWatcher = container.resolve(PriceWatcher);
 
     // Run deleteWatchersWithStaleData every 24 hours for check and delete stale data
-    setInterval(
-        async () => await watcherService.deleteWatchersWithStaleData(),
-        ONE_DAY_IN_MS
-    );
-    console.log("Watchers with stale data deleted");
+    // setInterval(
+    //     async () => await watcherService.deleteWatchersWithStaleData(),
+    //     ONE_DAY_IN_MS
+    // );
+    // console.log("Watchers with stale data deleted");
 
     await Promise.all([
-        cgPriceWatcher.run(),
-        apiPriceWatcher.run(),
         watcherService.subscribeToExplorer(),
         explorerService.checkService(),
+        cgPriceWatcher.run(),
+        apiPriceWatcher.run(),
         priceWatcher.run()
     ]);
-
-    app.listen(appPort, () => {
-        console.log(`Server is running on port ${appPort}`);
-    });
 }
 
 main().then(() => console.log("App is started"));
