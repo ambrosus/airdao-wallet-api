@@ -14,4 +14,4 @@ typechain-types
 .npmrc
 .DS_Store
 .idea
-service-account.json
+cred.json

@@ -25,7 +25,6 @@ const fcmClient = admin.messaging();
 export const createContainer = async (): Promise<DependencyContainer> => {
 
     const cacheStorage = new Redis(redisUrl);
-    console.log("REDIS_URL", { redisUrl });
     container.register<Redis>("Redis", { useValue: cacheStorage });
 
     const explorerService = container.resolve(ExplorerService);
