@@ -62,8 +62,10 @@ export class WatcherService {
             this.historicalNotificationsService.getHistoricalNotifications(watcher._id)
         ]);
 
+        const { _doc } = watcher as unknown as { _doc: Watcher };
+
         return {
-            ...watcher,
+            ..._doc,
             addresses,
             historicalNotifications
         };
