@@ -82,6 +82,7 @@ export class WatcherService {
     async updateWatcher(pushToken: string, updateFields: { addresses?: string[], threshold?: number, txNotification?: string, priceNotification?: string }) {
         const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
+        console.log("Encoded push token", encodedPushToken);
         const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
 
         if (!watcher) {
