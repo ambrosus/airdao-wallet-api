@@ -30,30 +30,30 @@ async function main() {
     setupRoutes(app, container);
     console.log("Routes are set up");
 
-    const watcherService = container.resolve(WatcherService);
-    console.log("Watcher service resolved");
-    const explorerService = container.resolve(ExplorerService);
-    console.log("Explorer service resolved");
-    await explorerService.initService();
-    console.log("Explorer service initiated");
+    // const watcherService = container.resolve(WatcherService);
+    // console.log("Watcher service resolved");
+    // const explorerService = container.resolve(ExplorerService);
+    // console.log("Explorer service resolved");
+    // await explorerService.initService();
+    // console.log("Explorer service initiated");
 
     const cgPriceWatcher = container.resolve(CgPriceWatcher);
-    const apiPriceWatcher = container.resolve(ApiPriceWatcher);
-    const priceWatcher = container.resolve(PriceWatcher);
+    // const apiPriceWatcher = container.resolve(ApiPriceWatcher);
+    // const priceWatcher = container.resolve(PriceWatcher);
 
     // Run deleteWatchersWithStaleData every 24 hours for check and delete stale data
-    setInterval(
-        async () => await watcherService.deleteWatchersWithStaleData(),
-        ONE_DAY_IN_MS
-    );
+    // setInterval(
+    //     async () => await watcherService.deleteWatchersWithStaleData(),
+    //     ONE_DAY_IN_MS
+    // );
     console.log("Watchers with stale data deleted");
 
     await Promise.all([
         cgPriceWatcher.run(),
-        apiPriceWatcher.run(),
-        watcherService.subscribeToExplorer(),
-        explorerService.checkService(),
-        priceWatcher.run()
+        // apiPriceWatcher.run(),
+        // watcherService.subscribeToExplorer(),
+        // explorerService.checkService(),
+        // priceWatcher.run()
     ]);
 
     app.listen(appPort, () => {
