@@ -162,7 +162,7 @@ export class WatcherService {
 
         await Promise.all([
             this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id),
-            this.watcherRepository.deleteWatcher({ pushToken })
+            this.watcherRepository.deleteWatcher({ pushToke: encodedPushToken })
         ]);
 
     }
