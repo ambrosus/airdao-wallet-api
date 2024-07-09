@@ -28,7 +28,7 @@ export class WatcherRepository {
     }
 
     async updateWatcher(filter: Record<string, string>, update: Record<string, unknown>) {
-        return WatcherModel.findOneAndUpdate(filter, update);
+        return WatcherModel.findOneAndUpdate(filter, update).exec();
     }
 
     async deleteWatcher(filer: Record<string, string>) {
