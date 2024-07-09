@@ -127,7 +127,7 @@ export class WatcherService {
         console.log("Updates", updates);
 
         if (Object.keys(updates).length > 0) {
-            await this.watcherRepository.updateWatcher({ pushToken }, updates);
+            await this.watcherRepository.updateWatcher({ pushToken: encodedPushToken }, updates);
         }
     }
 
