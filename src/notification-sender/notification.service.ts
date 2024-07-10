@@ -21,6 +21,7 @@ export class NotificationService  {
             pushToken,
             data
         }: Notification ): Promise<string | null> {
+        console.log("ANDROID CHANNEL", this.androidChannel);
         const androidData: Record<string, string> = {};
         Object.entries(data).forEach(([key, value]) => {
             switch (typeof value) {
@@ -38,6 +39,8 @@ export class NotificationService  {
                     break;
             }
         });
+
+        console.log("androidData", androidData);
 
         const message = {
             notification: {
