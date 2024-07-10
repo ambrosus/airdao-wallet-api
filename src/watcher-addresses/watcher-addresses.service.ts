@@ -39,12 +39,7 @@ export class WatcherAddressesService {
     }
 
     async deleteWatcherAddresses(watcherId: string, addresses: string[]) {
-        console.log("deleteWatcherAddresses", watcherId, addresses);
-        const promises = addresses.map(async (address) => {
-            await this.repository.deleteWatcherAddress(watcherId, address);
-        });
-
-        console.log("promises", promises);
+        const promises = addresses.map(async (address) => this.repository.deleteWatcherAddress(watcherId, address));
 
         await Promise.all(promises);
 
