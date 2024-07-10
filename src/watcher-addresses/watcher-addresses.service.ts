@@ -1,7 +1,5 @@
 import { singleton } from "tsyringe";
 import { WatcherAddressesRepository } from "./watcher-addresses.repository";
-import { Promise } from "mongoose";
-
 
 @singleton()
 export class WatcherAddressesService {
