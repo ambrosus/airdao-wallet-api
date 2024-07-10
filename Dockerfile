@@ -1,13 +1,12 @@
-FROM node:18-alpine
-
+FROM node:18-alpine AS build
 WORKDIR /app
-
-COPY ./package.json /app
-COPY ./package-lock.json /app
-COPY ./src /app/src
-
+COPY package.json package-lock.json ./
 RUN npm install
+COPY ./src ./src
 
-COPY . ./
-
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/src ./src
+COPY package.json ./
 CMD ["npm", "start"]
