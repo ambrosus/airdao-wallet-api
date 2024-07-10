@@ -61,7 +61,8 @@ export const createContainer = async (): Promise<DependencyContainer> => {
     const priceWatcher = new PriceWatcher(
         container.resolve("Redis"),
         container.resolve(WatcherService),
-        container.resolve(NotificationService)
+        container.resolve(NotificationService),
+        container.resolve(HistoricalNotificationsService)
     );
 
     container.register<PriceWatcher>(PriceWatcher, { useValue: priceWatcher });
