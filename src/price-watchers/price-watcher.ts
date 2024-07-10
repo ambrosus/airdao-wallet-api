@@ -44,6 +44,8 @@ export class PriceWatcher {
 
             const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
 
+
+            console.log("SENDING PRICE NOTIFICATION", { title, body, decodedPushToken, data });
             await Promise.all([
                 this.notificationService.sendNotification({
                     title,
