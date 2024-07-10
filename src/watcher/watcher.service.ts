@@ -181,6 +181,7 @@ export class WatcherService {
         const allowedAddresses = watcherAddresses.filter(address => addresses.includes(address));
 
         if (allowedAddresses.length > 0) {
+            console.log("Allowed addresses", allowedAddresses);
             await Promise.all([
                 this.explorerService.unsubscribeAddresses(allowedAddresses),
                 this.watcherAddressesService.deleteWatcherAddresses(watcher._id, allowedAddresses)
