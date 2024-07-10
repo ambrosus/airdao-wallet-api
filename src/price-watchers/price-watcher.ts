@@ -3,13 +3,15 @@ import { CronJob } from "cron";
 import { singleton } from "tsyringe";
 import { WatcherService } from "../watcher";
 import { NotificationService } from "../notification-sender";
+import { HistoricalNotificationsService } from "../historical-notifications";
 
 @singleton()
 export class PriceWatcher {
     constructor(
         private readonly cacheStorage: Redis,
         private readonly watcherService: WatcherService,
-        private readonly notificationService: NotificationService
+        private readonly notificationService: NotificationService,
+        private readonly historicalNotificationsService: HistoricalNotificationsService,
     ) {
     }
     async run() {
@@ -18,29 +20,23 @@ export class PriceWatcher {
     }
 
     private async watchPrice() {
-        console.log("Watching Price");
         const watchers = await this.watcherService.getAllWatchers({ priceNotification: "ON" });
-        console.log("WATCHERS", watchers);
         if (!watchers.length) return;
+
         await Promise.all(watchers.map(async (watcher) => {
             const tokenPrice = await this.cacheStorage.get("apiPrice");
-            console.log("TOKEN PRICE", tokenPrice);
             if (!tokenPrice) {
                 throw new Error("Price data not found");
             }
 
             const currentPrice = Number(tokenPrice);
-            console.log("Current Price", currentPrice);
 
             const percentage: number = (currentPrice - watcher.tokenPrice!) / watcher.tokenPrice! * 100;
-            console.log("Percentage", percentage);
 
             const roundedPercentage: number = Math.abs((Math.round(percentage * 100) / 100));
-            console.log("Rounded Percentage", percentage);
+            if (roundedPercentage < watcher.threshold) return;
 
             const roundedPrice: string = currentPrice.toFixed(5);
-            console.log("roundedPrice", roundedPrice);
-
 
             const title = "Price Alert";
             const data = { type: "price-alert", percentage: roundedPercentage };
@@ -54,18 +50,23 @@ export class PriceWatcher {
             }
 
             const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
-            console.log("decodedPushToken", decodedPushToken);
 
 
-            console.log("SENDING PRICE NOTIFICATION", { title, body, decodedPushToken, data });
-            await Promise.all([
+           return Promise.all([
                 this.notificationService.sendNotification({
                     title,
                     body,
                     pushToken: decodedPushToken,
                     data
                 }),
-                this.watcherService.updateWatcherPrice(watcher.pushToken, currentPrice)
+                this.watcherService.updateWatcherPrice(watcher.pushToken, currentPrice),
+                this.historicalNotificationsService.addHistoricalNotification(watcher._id, {
+                    title,
+                    body,
+                    sent: true,
+                    timestamp: Date.now()
+                })
+
             ]);
         }));
     }
