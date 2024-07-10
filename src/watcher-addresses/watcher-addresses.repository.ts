@@ -16,7 +16,10 @@ export class WatcherAddressesRepository {
     }
 
     async getWatcherAddresses(watcherId: string) {
-        return WatcherAddressModel.find({ watcherId }).select("-watcherId");
+        return WatcherAddressModel.find({ watcherId })
+            .select("address -_id")
+            .lean()
+            .exec();
     }
 
     async getWatcherAddress(watcherId: string, address: string) {
