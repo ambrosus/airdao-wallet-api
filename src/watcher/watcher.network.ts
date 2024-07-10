@@ -43,14 +43,12 @@ export class WatcherNetwork {
 
     async updateWatcher(req: Request, res: Response): Promise<void> {
         try {
-            const { pushToken } = req.params;
-            const { threshold, txNotification, priceNotification, addresses } = req.body;
-            console.log("UPDATE", { pushToken, threshold, txNotification, priceNotification, addresses });
-            await this.service.updateWatcher(pushToken, {
+            const { threshold, tx_notification, price_notification, addresses, push_token } = req.body;
+            await this.service.updateWatcher(push_token, {
                 addresses,
                 threshold,
-                txNotification,
-                priceNotification,
+                txNotification: tx_notification,
+                priceNotification: price_notification,
             });
             res.json({ message: "Watcher updated" });
         } catch (error) {
