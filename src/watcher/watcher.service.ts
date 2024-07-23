@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import Redis from "ioredis";
 import { singleton } from "tsyringe";
 
