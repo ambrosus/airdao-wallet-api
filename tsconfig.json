@@ -11,8 +11,8 @@
     "resolveJsonModule": true,
     "allowJs": true,
     "outDir": "dist",
-    "types": ["node", "mocha"]
+    "types": ["node"]
   },
-  "include": ["src", "src/contracts.d.ts"],
+  "include": ["src"],
   "exclude": ["node_modules"]
 }

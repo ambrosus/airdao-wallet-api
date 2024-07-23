@@ -64,7 +64,7 @@ export class NotificationService  {
             const response = await this.fcmClient.send(message);
             return response;
         } catch (error) {
-            console.error("Error sending message:", error);
+            console.error("Error sending message:", { error, pushToken, message });
             return null;
         }
     }
