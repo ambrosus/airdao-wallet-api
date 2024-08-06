@@ -4,47 +4,47 @@ import { WatcherAddressesRepository } from "./watcher-addresses.repository";
 @singleton()
 export class WatcherAddressesService {
 
-    constructor(private readonly repository: WatcherAddressesRepository) {
-    }
+  constructor(private readonly repository: WatcherAddressesRepository) {
+  }
 
-    async createWatcherAddress(watcherId: string, address: string) {
-        return this.repository.createWatcherAddress(watcherId, address);
-    }
+  async createWatcherAddress(watcherId: string, address: string) {
+    return this.repository.createWatcherAddress(watcherId, address);
+  }
 
-    async getAllWatchersAddresses(filter: Record<string, unknown>) {
-        return this.repository.getAllWatchersAddresses(filter);
-    }
+  async getAllWatchersAddresses(filter: Record<string, unknown>) {
+    return this.repository.getAllWatchersAddresses(filter);
+  }
 
-    async getUniqueAddresses() {
-        return this.repository.getUniqueAddresses();
-    }
+  async getUniqueAddresses() {
+    return this.repository.getUniqueAddresses();
+  }
 
-    async getWatcherAddresses(watcherId: string) {
-        const watcherAddressesDoc =  await this.repository.getWatcherAddresses(watcherId);
-        return watcherAddressesDoc.map(addressDoc => addressDoc.address);
-    }
+  async getWatcherAddresses(watcherId: string) {
+    const watcherAddressesDoc = await this.repository.getWatcherAddresses(watcherId);
+    return watcherAddressesDoc.map(addressDoc => addressDoc.address);
+  }
 
-    async getWatcherAddressesWithDetails(watcherId: string) {
-        return this.repository.getWatcherAddresses(watcherId);
-    }
+  async getWatcherAddressesWithDetails(watcherId: string) {
+    return this.repository.getWatcherAddresses(watcherId);
+  }
 
-    async getWatcherIdsByAddress(address: string) {
-        return this.repository.getWatcherIdsByAddress(address);
-    }
+  async getWatcherIdsByAddress(address: string) {
+    return this.repository.getWatcherIdsByAddress(address);
+  }
 
-    async updateWatcherAddress(watcherId: string, address: string, data: Record<string, unknown>) {
-        return this.repository.updateWatcherAddress(watcherId, address, data);
-    }
+  async updateWatcherAddress(watcherId: string, address: string, data: Record<string, unknown>) {
+    return this.repository.updateWatcherAddress(watcherId, address, data);
+  }
 
-    async deleteWatcherAddresses(watcherId: string, addresses: string[]) {
-        const promises = addresses.map(async (address) => this.repository.deleteWatcherAddress(watcherId, address));
+  async deleteWatcherAddresses(watcherId: string, addresses: string[]) {
+    const promises = addresses.map(async (address) => this.repository.deleteWatcherAddress(watcherId, address));
 
-        await Promise.all(promises);
+    await Promise.all(promises);
 
-        return true;
-    }
+    return true;
+  }
 
-    async deleteAllWatcherAddresses(watcherId: string) {
-        await this.repository.deleteWatcherAddresses(watcherId);
-    }
+  async deleteAllWatcherAddresses(watcherId: string) {
+    await this.repository.deleteWatcherAddresses(watcherId);
+  }
 }

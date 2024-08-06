@@ -4,14 +4,14 @@ import { HistoricalNotificationModel } from "./historical-notifications.model";
 
 @singleton()
 export class HistoricalNotificationsRepository {
-    constructor() {
-    }
+  constructor() {
+  }
 
-    async getHistoricalNotifications(watcherId: string) {
-        return HistoricalNotificationModel.find({ watcherId }).select("-watcherId");
-    }
+  async getHistoricalNotifications(watcherId: string) {
+    return HistoricalNotificationModel.find({ watcherId }).select("-watcherId");
+  }
 
-    async addHistoricalNotification(watcherId: string, notification: Record<string, unknown>) {
-        return HistoricalNotificationModel.create({ watcherId, ...notification });
-    }
+  async addHistoricalNotification(watcherId: string, notification: Record<string, unknown>) {
+    return HistoricalNotificationModel.create({ watcherId, ...notification });
+  }
 }

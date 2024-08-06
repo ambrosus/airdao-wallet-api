@@ -6,17 +6,17 @@ import { cgTokenPriceUrl } from "../config";
 
 @singleton()
 export class CgPriceWatcher {
-    constructor(private readonly cacheStorage: Redis) {
-    }
+  constructor(private readonly cacheStorage: Redis) {
+  }
 
-    async run() {
-        const job = new CronJob("0 */12 * * *", async () => this.watchCgPrice());
-        job.start();
-    }
+  async run() {
+    const job = new CronJob("0 */12 * * *", async () => this.watchCgPrice());
+    job.start();
+  }
 
-    private async watchCgPrice() {
-        console.log("Watching Cg Price");
-        const { data: { prices } } = await axios.get(cgTokenPriceUrl);
-        await this.cacheStorage.set("cgPrices", JSON.stringify(prices));
-    }
+  private async watchCgPrice() {
+    console.log("Watching Cg Price");
+    const { data: { prices } } = await axios.get(cgTokenPriceUrl);
+    await this.cacheStorage.set("cgPrices", JSON.stringify(prices));
+  }
 }
