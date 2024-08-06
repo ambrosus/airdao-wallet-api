@@ -33,7 +33,6 @@ export class ExplorerService {
         return await axios.get(`${explorerUrl}/transactions/${txHash}`);
     }
 
-
     async checkService() {
         console.log("Checking service");
         const maxRetries = 6;

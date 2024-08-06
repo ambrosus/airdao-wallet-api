@@ -14,6 +14,7 @@ export class PriceWatcher {
         private readonly historicalNotificationsService: HistoricalNotificationsService,
     ) {
     }
+
     async run() {
         const job = new CronJob("*/330 * * * * *", async () => this.watchPrice());
         job.start();
@@ -52,7 +53,7 @@ export class PriceWatcher {
             const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
 
 
-           return Promise.all([
+            return Promise.all([
                 this.notificationService.sendNotification({
                     title,
                     body,
@@ -65,8 +66,7 @@ export class PriceWatcher {
                     body,
                     sent: true,
                     timestamp: Date.now()
-                })
-
+                }),
             ]);
         }));
     }
