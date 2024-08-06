@@ -1,5 +1,4 @@
 import Redis from "ioredis";
-import { CronJob } from "cron";
 import { singleton } from "tsyringe";
 import { WatcherService } from "../watcher";
 import { NotificationService } from "../notification-sender";
@@ -16,8 +15,14 @@ export class PriceWatcher {
   }
 
   async run() {
-    const job = new CronJob("*/330 * * * * *", async () => this.watchPrice());
-    job.start();
+    this.scheduleNextRun();
+  }
+
+  private scheduleNextRun() {
+    setTimeout(async () => {
+      await this.watchPrice();
+      this.scheduleNextRun();
+    }, 330 * 1000);
   }
 
   private async watchPrice() {
