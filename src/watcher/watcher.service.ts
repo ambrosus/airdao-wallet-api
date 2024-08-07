@@ -9,6 +9,7 @@ import { WatcherRepository } from "./watcher.repository";
 import { NotificationService } from "../notification-sender";
 import { WatcherAddressesService } from "../watcher-addresses";
 import { HistoricalNotificationsService } from "../historical-notifications";
+import { camelToSnake } from "../utils/camel-to-snake-case";
 
 @singleton()
 export class WatcherService {
@@ -66,15 +67,15 @@ export class WatcherService {
 
     const { _doc } = watcher as unknown as { _doc: Watcher };
 
-    return {
+    return camelToSnake({
       ..._doc,
       addresses,
       historicalNotifications
-    };
+    });
   }
 
   async getAllWatchers(filter?: Record<string, string>) {
-    return await this.watcherRepository.getAllWatchers(filter);
+    return camelToSnake(await this.watcherRepository.getAllWatchers(filter));
   }
 
   async getWatcherHistoryPrices() {
