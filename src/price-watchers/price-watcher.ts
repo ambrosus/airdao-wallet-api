@@ -3,6 +3,7 @@ import { singleton } from "tsyringe";
 import { WatcherService } from "../watcher";
 import { NotificationService } from "../notification-sender";
 import { HistoricalNotificationsService } from "../historical-notifications";
+import { appEnv, notificationsTitleConfig } from "../config";
 
 @singleton()
 export class PriceWatcher {
@@ -29,7 +30,6 @@ export class PriceWatcher {
     console.log("Watching Price");
     const watchers = await this.watcherService.getAllWatchers({ priceNotification: "ON" });
     if (!watchers.length) {
-      console.log("NO WATCHERS FOUND");
       return;
     }
 
@@ -40,7 +40,6 @@ export class PriceWatcher {
       }
 
       const currentPrice = Number(tokenPrice);
-      console.log("currentPrice", currentPrice);
 
       if (!watcher.tokenPrice) {
         console.log();
@@ -48,32 +47,26 @@ export class PriceWatcher {
       }
 
       const percentage: number = (currentPrice - watcher.tokenPrice) / watcher.tokenPrice * 100;
-      console.log("percentage", percentage);
 
       const roundedPercentage: number = Math.abs((Math.round(percentage * 100) / 100));
       if (roundedPercentage < watcher.threshold) {
-        console.log("roundedPercentage < watcher.threshold", { roundedPercentage, threshold: watcher.threshold });
         return;
       }
 
       const roundedPrice: string = currentPrice.toFixed(5);
-      console.log("roundedPrice", roundedPrice);
 
-      const title = "Price Alert";
+      const title = notificationsTitleConfig[appEnv].priceAlert;
       const data = { type: "price-alert", percentage: roundedPercentage };
       let body = "";
 
 
       if (roundedPercentage >= watcher.threshold) {
-        console.log("roundedPercentage >= watcher.threshold");
         body = `🚀 AMB Price changed on +${roundedPercentage}%! Current price $${roundedPrice}`;
       } else if (roundedPercentage <= -watcher.threshold) {
-        console.log("roundedPercentage <= -watcher.threshold");
         body = `🔻 AMB Price changed on -${roundedPercentage}%! Current price $${roundedPrice}`;
       }
 
       const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
-      console.log("decodedPushToken", decodedPushToken);
 
       return Promise.all([
         this.notificationService.sendNotification({

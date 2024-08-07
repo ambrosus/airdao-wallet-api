@@ -4,7 +4,7 @@ import { singleton } from "tsyringe";
 
 import { Watcher } from "./watcher.model";
 import { ExplorerService } from "../explorer";
-import { explorerToken, ONE_DAY_IN_MS } from "../config";
+import { appEnv, explorerToken, notificationsTitleConfig, ONE_DAY_IN_MS } from "../config";
 import { WatcherRepository } from "./watcher.repository";
 import { NotificationService } from "../notification-sender";
 import { WatcherAddressesService } from "../watcher-addresses";
@@ -89,7 +89,6 @@ export class WatcherService {
   }) {
     const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
-    console.log("Encoded push token", encodedPushToken);
     const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
 
     if (!watcher) {
@@ -120,19 +119,15 @@ export class WatcherService {
     }
 
     if (threshold !== undefined) {
-      console.log("threshold", threshold);
       updates.threshold = threshold;
     }
     if (txNotification !== undefined) {
-      console.log("txNotification", txNotification);
       updates.txNotification = txNotification;
     }
     if (priceNotification !== undefined) {
       console.log("priceNotification", priceNotification);
       updates.priceNotification = priceNotification;
     }
-
-    console.log("Updates", updates);
 
     if (Object.keys(updates).length > 0) {
       await this.watcherRepository.updateWatcher({ pushToken: encodedPushToken }, updates);
@@ -257,7 +252,7 @@ export class WatcherService {
 
     const notifications = watchers.map(async (watcher) => {
       const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
-      const title = "AMB-Net Tx Alert";
+      const title = notificationsTitleConfig[appEnv].txAlert;
       const body = `From: ${cutAddress(from)}\nTo: ${cutAddress(to)}\nAmount: ${roundedAmount} ${tokenSymbol}`;
 
       try {
