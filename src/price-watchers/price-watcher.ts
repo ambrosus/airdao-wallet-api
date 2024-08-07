@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 import { singleton } from "tsyringe";
-import { WatcherService } from "../watcher";
+import { Watcher, WatcherService } from "../watcher";
 import { NotificationService } from "../notification-sender";
 import { HistoricalNotificationsService } from "../historical-notifications";
 import { appEnv, notificationsTitleConfig } from "../config";
@@ -33,7 +33,7 @@ export class PriceWatcher {
       return;
     }
 
-    await Promise.all(watchers.map(async (watcher) => {
+    await Promise.all(watchers.map(async (watcher: Watcher) => {
       const tokenPrice = await this.cacheStorage.get("apiPrice");
       if (!tokenPrice) {
         throw new Error("Price data not found");
