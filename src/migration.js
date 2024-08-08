@@ -112,6 +112,7 @@ const historicalNotificationSchema = new Schema({
 const HistoricalNotification = mongoose.model("HistoricalNotificationModel", historicalNotificationSchema);
 
 async function processChunk(chunk) {
+    console.log("processing chunk...");
     for (const oldWatcher of chunk) {
         const newWatcher = new Watcher({
             deviceId: oldWatcher.deviceId,
@@ -145,6 +146,8 @@ async function processChunk(chunk) {
             });
             await newNotification.save();
         }
+
+        console.log("chunk processed");
     }
 }
 
@@ -152,7 +155,6 @@ async function migrateData() {
     const connectionString = process.env.MONGO_DB_URL;
 
     const sourceDbUrl = connectionString.replace("AIRDAO-MOBILE", "AIRDAO-MOBILE-OLD");
-    const targetDbUrl = connectionString.replace("AIRDAO-MOBILE", "AIRDAO-MOBILE-TEST");
 
     await mongoose.connect(sourceDbUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 
@@ -161,24 +163,8 @@ async function migrateData() {
 
     while (hasMore) {
         const chunk = await OldWatcher.find().skip(skip).limit(CHUNK_SIZE);
-
         if (chunk.length > 0) {
-            await mongoose.disconnect();
-
-            await mongoose.connect(targetDbUrl, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true
-            });
-
             await processChunk(chunk);
-
-            await mongoose.disconnect();
-
-            await mongoose.connect(sourceDbUrl, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true
-            });
-
             skip += CHUNK_SIZE;
         } else {
             hasMore = false;
