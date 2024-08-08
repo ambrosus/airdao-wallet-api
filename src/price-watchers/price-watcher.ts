@@ -77,7 +77,7 @@ export class PriceWatcher {
         }),
         this.watcherService.updateWatcherPrice(watcher.pushToken, currentPrice),
         this.historicalNotificationsService.addHistoricalNotification(watcher._id, {
-          title: data.type,
+          title,
           body,
           sent: true,
           timestamp: Date.now()

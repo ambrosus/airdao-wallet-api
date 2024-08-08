@@ -1,8 +1,11 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
 
 const { Schema } = mongoose;
 
 const CHUNK_SIZE = 100;
+
+dotenv.config();
 
 const oldWatcherSchema = new Schema({
     deviceId: String,
@@ -29,7 +32,6 @@ const oldWatcherSchema = new Schema({
 
 const OldWatcher = mongoose.model("OldWatcher", oldWatcherSchema);
 
-// Target Database (New Schema) Models
 const watcherSchema = new Schema({
     deviceId: { type: String, required: false },
     pushToken: { type: String, required: true },
@@ -145,7 +147,12 @@ async function processChunk(chunk) {
 }
 
 async function migrateData() {
-    await mongoose.connect("source_db_url", { useNewUrlParser: true, useUnifiedTopology: true });
+    const connectionString = process.env.MONGO_DB_URL;
+
+    const sourceDbUrl = connectionString.replace("AIRDAO-MOBILE", "AIRDAO-MOBILE-OLD");
+    const targetDbUrl = connectionString.replace("AIRDAO-MOBILE", "AIRDAO-MOBILE-TEST");
+
+    await mongoose.connect(sourceDbUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 
     let skip = 0;
     let hasMore = true;
@@ -156,7 +163,7 @@ async function migrateData() {
         if (chunk.length > 0) {
             await mongoose.disconnect();
 
-            await mongoose.connect("target_db_url", {
+            await mongoose.connect(targetDbUrl, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true
             });
@@ -165,7 +172,7 @@ async function migrateData() {
 
             await mongoose.disconnect();
 
-            await mongoose.connect("source_db_url", {
+            await mongoose.connect(sourceDbUrl, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true
             });
