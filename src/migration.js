@@ -5,7 +5,7 @@ const dotenv = require("dotenv");
 
 const { Schema } = mongoose;
 
-const CHUNK_SIZE = 100;
+const CHUNK_SIZE = 10;
 
 dotenv.config();
 
@@ -162,7 +162,9 @@ async function migrateData() {
     let hasMore = true;
 
     while (hasMore) {
-        const chunk = await OldWatcher.find().skip(skip).limit(CHUNK_SIZE);
+        console.log("inside iteration");
+        const chunk = await OldWatcher.find({}).skip(skip).limit(CHUNK_SIZE);
+        console.log("chunk length", chunk.length);
         if (chunk.length > 0) {
             await processChunk(chunk);
             skip += CHUNK_SIZE;
