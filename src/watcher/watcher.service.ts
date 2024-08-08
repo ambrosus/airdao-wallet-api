@@ -269,7 +269,7 @@ export class WatcherService {
 
       await Promise.all([
         this.historicalNotificationsService.addHistoricalNotification(watcher._id, {
-          title,
+          title: data.type,
           body,
           sent: true,
           timestamp: Date.now()
