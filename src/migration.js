@@ -114,6 +114,7 @@ const HistoricalNotification = mongoose.model("HistoricalNotificationModel", his
 async function processChunk(chunk) {
     console.log("processing chunk...");
     for (const oldWatcher of chunk) {
+        console.log("oldWatcher", oldWatcher);
         const newWatcher = new Watcher({
             deviceId: oldWatcher.device_id,
             pushToken: oldWatcher.push_token,
