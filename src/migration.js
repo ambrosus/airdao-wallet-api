@@ -10,24 +10,24 @@ const CHUNK_SIZE = 10;
 dotenv.config();
 
 const oldWatcherSchema = new Schema({
-    deviceId: String,
-    pushToken: String,
+    device_id: String,
+    push_token: String,
     threshold: Number,
-    tokenPrice: Number,
-    txNotification: String,
-    priceNotification: String,
+    token_price: Number,
+    tx_notification: String,
+    price_notification: String,
     addresses: [{
         address: String,
-        lastTx: String,
+        last_tx: String,
     }],
-    historicalNotifications: [{
+    historical_notifications: [{
         title: String,
         body: String,
         sent: Boolean,
         timestamp: Date,
     }],
-    lastSuccessDate: Date,
-    lastFailDate: Date,
+    last_success_date: Date,
+    last_fail_date: Date,
     createdAt: Date,
     updatedAt: Date,
 }, { collection: "watcher", modelName: "watcher" });
@@ -115,14 +115,14 @@ async function processChunk(chunk) {
     console.log("processing chunk...");
     for (const oldWatcher of chunk) {
         const newWatcher = new Watcher({
-            deviceId: oldWatcher.deviceId,
-            pushToken: oldWatcher.pushToken,
+            deviceId: oldWatcher.device_id,
+            pushToken: oldWatcher.push_token,
             threshold: oldWatcher.threshold,
-            tokenPrice: oldWatcher.tokenPrice,
-            txNotification: oldWatcher.txNotification,
-            priceNotification: oldWatcher.priceNotification,
-            lastSuccessDate: oldWatcher.lastSuccessDate ? oldWatcher.lastSuccessDate.getTime() : undefined,
-            lastFailDate: oldWatcher.lastFailDate ? oldWatcher.lastFailDate.getTime() : undefined,
+            tokenPrice: oldWatcher.token_price,
+            txNotification: oldWatcher.tx_notification.toUpperCase(),
+            priceNotification: oldWatcher.price_notification.toUpperCase(),
+            lastSuccessDate: oldWatcher.last_success_date ? oldWatcher.lastSuccessDate.getTime() : undefined,
+            lastFailDate: oldWatcher.last_fail_date ? oldWatcher.lastFailDate.getTime() : undefined,
         });
 
         await newWatcher.save();
@@ -131,12 +131,12 @@ async function processChunk(chunk) {
             const newAddress = new WatcherAddress({
                 watcherId: newWatcher._id.toString(),
                 address: address.address,
-                lastTx: address.lastTx,
+                lastTx: address.last_tx,
             });
             await newAddress.save();
         }
 
-        for (const notification of oldWatcher.historicalNotifications) {
+        for (const notification of oldWatcher.historical_notifications) {
             const newNotification = new HistoricalNotification({
                 watcherId: newWatcher._id.toString(),
                 title: notification.title,
