@@ -1,5 +1,7 @@
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+// eslint-disable-next-line @typescript-eslint/no-var-requires,no-undef
+const mongoose = require("mongoose");
+// eslint-disable-next-line @typescript-eslint/no-var-requires,no-undef
+const dotenv = require("dotenv");
 
 const { Schema } = mongoose;
 
