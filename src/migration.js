@@ -10,174 +10,178 @@ const CHUNK_SIZE = 10;
 dotenv.config();
 
 const oldWatcherSchema = new Schema({
-    device_id: String,
-    push_token: String,
-    threshold: Number,
-    token_price: Number,
-    tx_notification: String,
-    price_notification: String,
-    addresses: [{
-        address: String,
-        last_tx: String,
-    }],
-    historical_notifications: [{
-        title: String,
-        body: String,
-        sent: Boolean,
-        timestamp: Date,
-    }],
-    last_success_date: Date,
-    last_fail_date: Date,
-    createdAt: Date,
-    updatedAt: Date,
+  device_id: String,
+  push_token: String,
+  threshold: Number,
+  token_price: Number,
+  tx_notification: String,
+  price_notification: String,
+  addresses: [{
+    address: String,
+    last_tx: String,
+  }],
+  historical_notifications: [{
+    title: String,
+    body: String,
+    sent: Boolean,
+    timestamp: Date,
+  }],
+  last_success_date: Date,
+  last_fail_date: Date,
+  createdAt: Date,
+  updatedAt: Date,
 }, { collection: "watcher", modelName: "watcher" });
 
 const OldWatcher = mongoose.model("watcher", oldWatcherSchema, "watcher");
 
 const watcherSchema = new Schema({
-    deviceId: { type: String, required: false },
-    pushToken: { type: String, required: true },
-    threshold: {
-        type: Number,
-        required: true,
-        message: "incorrect threshold (can be 5, 8 or 10)",
-    },
-    tokenPrice: { type: Number, required: false },
-    txNotification: {
-        type: String, required: true,
-        enum: ["ON", "OFF"],
-        message: "txNotification must be either ON or OFF.",
-    },
-    priceNotification: {
-        type: String, required: true,
-        enum: ["ON", "OFF"],
-        message: "priceNotification must be either ON or OFF.",
-    },
-    lastSuccessDate: { type: Number, required: false },
-    lastFailDate: { type: Number, required: false },
+  deviceId: { type: String, required: false },
+  pushToken: { type: String, required: true },
+  threshold: {
+    type: Number,
+    required: true,
+    message: "incorrect threshold (can be 5, 8 or 10)",
+  },
+  tokenPrice: { type: Number, required: false },
+  txNotification: {
+    type: String, required: true,
+    enum: ["ON", "OFF"],
+    message: "txNotification must be either ON or OFF.",
+  },
+  priceNotification: {
+    type: String, required: true,
+    enum: ["ON", "OFF"],
+    message: "priceNotification must be either ON or OFF.",
+  },
+  lastSuccessDate: { type: Number, required: false },
+  lastFailDate: { type: Number, required: false },
 }, {
-    timestamps: true,
-    toJSON: {
-        virtuals: true,
-        transform: (obj, ret) => {
-            delete ret._id;
-            delete ret.__v;
-            delete ret.createdAt;
-            delete ret.updatedAt;
-        },
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: (obj, ret) => {
+      delete ret._id;
+      delete ret.__v;
+      delete ret.createdAt;
+      delete ret.updatedAt;
     },
+  },
 });
 
 const Watcher = mongoose.model("WatcherModel", watcherSchema);
 
 const watcherAddressSchema = new Schema({
-    watcherId: { type: String, required: true },
-    address: { type: String, required: true },
-    lastTx: { type: String, required: false }
+  watcherId: { type: String, required: true },
+  address: { type: String, required: true },
+  lastTx: { type: String, required: false }
 }, {
-    timestamps: true,
-    toJSON: {
-        virtuals: true,
-        transform: (obj, ret) => {
-            delete ret._id;
-            delete ret.__v;
-            delete ret.createdAt;
-            delete ret.updatedAt;
-        },
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: (obj, ret) => {
+      delete ret._id;
+      delete ret.__v;
+      delete ret.createdAt;
+      delete ret.updatedAt;
     },
+  },
 });
 
 const WatcherAddress = mongoose.model("WatcherAddressModel", watcherAddressSchema);
 
 const historicalNotificationSchema = new Schema({
-    watcherId: { type: String, required: true },
-    title: { type: String, required: true },
-    body: { type: String, required: true },
-    sent: { type: Boolean, required: true },
-    timestamp: { type: Number, required: true }
+  watcherId: { type: String, required: true },
+  title: { type: String, required: true },
+  body: { type: String, required: true },
+  sent: { type: Boolean, required: true },
+  timestamp: { type: Number, required: true }
 }, {
-    timestamps: true,
-    toJSON: {
-        virtuals: true,
-        transform: (obj, ret) => {
-            delete ret._id;
-            delete ret.__v;
-            delete ret.createdAt;
-            delete ret.updatedAt;
-        },
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: (obj, ret) => {
+      delete ret._id;
+      delete ret.__v;
+      delete ret.createdAt;
+      delete ret.updatedAt;
     },
+  },
 });
 
 const HistoricalNotification = mongoose.model("HistoricalNotificationModel", historicalNotificationSchema);
 
 async function processChunk(chunk) {
-    console.log("processing chunk...");
-    for (const oldWatcher of chunk) {
-        console.log("oldWatcher", oldWatcher);
-        const newWatcher = new Watcher({
-            deviceId: oldWatcher.device_id,
-            pushToken: oldWatcher.push_token,
-            threshold: oldWatcher.threshold ?? 5,
-            tokenPrice: oldWatcher.token_price,
-            txNotification: oldWatcher.tx_notification ? String(oldWatcher.tx_notification).toUpperCase() : "OFF",
-            priceNotification: oldWatcher.price_notification ? String(oldWatcher.price_notification).toUpperCase() : "OFF",
-            lastSuccessDate: oldWatcher.last_success_date ? oldWatcher.last_success_date.getTime() : undefined,
-            lastFailDate: oldWatcher.last_fail_date ? oldWatcher.last_fail_date.getTime() : undefined,
+  console.log("processing chunk...");
+  for (const oldWatcher of chunk) {
+    console.log("oldWatcher", oldWatcher);
+    const newWatcher = new Watcher({
+      deviceId: oldWatcher.device_id,
+      pushToken: oldWatcher.push_token,
+      threshold: oldWatcher.threshold ?? 5,
+      tokenPrice: oldWatcher.token_price,
+      txNotification: oldWatcher.tx_notification ? String(oldWatcher.tx_notification).toUpperCase() : "OFF",
+      priceNotification: oldWatcher.price_notification ? String(oldWatcher.price_notification).toUpperCase() : "OFF",
+      lastSuccessDate: oldWatcher.last_success_date ? oldWatcher.last_success_date.getTime() : undefined,
+      lastFailDate: oldWatcher.last_fail_date ? oldWatcher.last_fail_date.getTime() : undefined,
+    });
+
+    await newWatcher.save();
+
+    if (oldWatcher.addresses) {
+      for (const address of oldWatcher.addresses) {
+        const newAddress = new WatcherAddress({
+          watcherId: newWatcher._id.toString(),
+          address: address.address,
+          lastTx: address.last_tx,
         });
-
-        await newWatcher.save();
-
-        for (const address of oldWatcher.addresses) {
-            const newAddress = new WatcherAddress({
-                watcherId: newWatcher._id.toString(),
-                address: address.address,
-                lastTx: address.last_tx,
-            });
-            await newAddress.save();
-        }
-
-        for (const notification of oldWatcher.historical_notifications) {
-            const newNotification = new HistoricalNotification({
-                watcherId: newWatcher._id.toString(),
-                title: notification.title,
-                body: notification.body,
-                sent: notification.sent,
-                timestamp: notification.timestamp,
-            });
-            await newNotification.save();
-        }
-
-        console.log("chunk processed");
+        await newAddress.save();
+      }
     }
+
+    if (oldWatcher.historical_notifications) {
+      for (const notification of oldWatcher.historical_notifications) {
+        const newNotification = new HistoricalNotification({
+          watcherId: newWatcher._id.toString(),
+          title: notification.title,
+          body: notification.body,
+          sent: notification.sent,
+          timestamp: notification.timestamp,
+        });
+        await newNotification.save();
+      }
+    }
+
+    console.log("chunk processed");
+  }
 }
 
 async function migrateData() {
-    const connectionString = process.env.MONGO_DB_URL;
+  const connectionString = process.env.MONGO_DB_URL;
 
-    const sourceDbUrl = connectionString.replace("AIRDAO-MOBILE", "AIRDAO-MOBILE-OLD");
+  const sourceDbUrl = connectionString.replace("AIRDAO-MOBILE", "AIRDAO-MOBILE-OLD");
 
-    await mongoose.connect(sourceDbUrl, { useNewUrlParser: true, useUnifiedTopology: true });
+  await mongoose.connect(sourceDbUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 
-    let skip = 0;
-    let hasMore = true;
+  let skip = 0;
+  let hasMore = true;
 
-    while (hasMore) {
-        console.log("inside iteration");
-        const chunk = await OldWatcher.find({}).skip(skip).limit(CHUNK_SIZE);
-        console.log("chunk length", chunk.length);
-        if (chunk.length > 0) {
-            await processChunk(chunk);
-            skip += CHUNK_SIZE;
-        } else {
-            hasMore = false;
-        }
+  while (hasMore) {
+    console.log("inside iteration");
+    const chunk = await OldWatcher.find({}).skip(skip).limit(CHUNK_SIZE);
+    console.log("chunk length", chunk.length);
+    if (chunk.length > 0) {
+      await processChunk(chunk);
+      skip += CHUNK_SIZE;
+    } else {
+      hasMore = false;
     }
+  }
 
-    await mongoose.disconnect();
+  await mongoose.disconnect();
 }
 
 migrateData().then(() => {
-    console.log("Migration completed successfully");
+  console.log("Migration completed successfully");
 }).catch(err => {
-    console.error("Migration failed", err);
+  console.error("Migration failed", err);
 });
