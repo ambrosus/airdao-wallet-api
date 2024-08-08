@@ -30,7 +30,8 @@ export class WatcherService {
     if (deviceId) {
       const watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
       if (watcher) {
-        await this.watcherRepository.deleteWatcher({ deviceId });
+        const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
+        await this.deleteWatcher(decodedPushToken);
       }
     }
 
