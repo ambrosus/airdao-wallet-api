@@ -214,7 +214,6 @@ export class WatcherService {
 
   async watcherCallback(id: string, items: { address: string, txHash: string }[]) {
     if (id !== explorerToken) throw new Error("Wrong Explorer API ID");
-    console.log("watcherCallback", items);
     const promises = items.map(async (item) => {
       await this.handleCallback(item.address, item.txHash);
     });
@@ -225,8 +224,6 @@ export class WatcherService {
   async handleCallback(address: string, txHash: string) {
     const watcherIds = await this.watcherAddressesService.getWatcherIdsByAddress(address);
     if (watcherIds.length === 0) return;
-
-    console.log("watcher ids", watcherIds);
 
     const watchers = await this.watcherRepository.getAllWatchers({
       _id: { $in: watcherIds },
@@ -254,7 +251,6 @@ export class WatcherService {
       symbol: tokenSymbol
     };
 
-    console.log("watchers", watchers);
 
     const notifications = watchers.map(async (watcher) => {
       const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
