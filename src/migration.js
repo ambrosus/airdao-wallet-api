@@ -120,8 +120,8 @@ async function processChunk(chunk) {
             pushToken: oldWatcher.push_token,
             threshold: oldWatcher.threshold,
             tokenPrice: oldWatcher.token_price,
-            txNotification: oldWatcher.tx_notification.toUpperCase(),
-            priceNotification: oldWatcher.price_notification.toUpperCase(),
+            txNotification: String(oldWatcher.tx_notification).toUpperCase(),
+            priceNotification: String(oldWatcher.price_notification).toUpperCase(),
             lastSuccessDate: oldWatcher.last_success_date ? oldWatcher.lastSuccessDate.getTime() : undefined,
             lastFailDate: oldWatcher.last_fail_date ? oldWatcher.lastFailDate.getTime() : undefined,
         });
