@@ -30,7 +30,7 @@ const oldWatcherSchema = new Schema({
     lastFailDate: Date,
     createdAt: Date,
     updatedAt: Date,
-});
+}, { collection: "watcher", modelName: "watcher" });
 
 const OldWatcher = mongoose.model("watcher", oldWatcherSchema);
 
