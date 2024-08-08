@@ -13,8 +13,8 @@ export interface Watcher extends Document {
 
 const watcherModel = new Schema<Watcher>(
   {
-    deviceId: { type: String, required: false },
-    pushToken: { type: String, required: true },
+    deviceId: { type: String, required: false, unique: true },
+    pushToken: { type: String, required: true, unique: true },
     threshold: {
       type: Number,
       required: true,

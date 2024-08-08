@@ -28,7 +28,9 @@ export class WatcherService {
     const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
     if (deviceId) {
+      console.log("if deviceId", deviceId);
       const watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
+      console.log("watcher", watcher);
       if (watcher) {
         const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
         await this.deleteWatcher(decodedPushToken);
@@ -141,6 +143,7 @@ export class WatcherService {
 
   async updateWatcherPushToken(oldPushToken: string, newPushToken: string, deviceId?: string) {
     const encodedOldPushToken = Buffer.from(oldPushToken).toString("base64");
+    const encodedNewPushToken = Buffer.from(newPushToken).toString("base64");
 
     let watcher;
     if (deviceId) watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
@@ -150,7 +153,10 @@ export class WatcherService {
       throw new Error("watcher not found for device id or old push token");
     }
 
-    await this.watcherRepository.updateWatcher({ pushToken: oldPushToken }, { pushToken: newPushToken, deviceId });
+    await this.watcherRepository.updateWatcher({ pushToken: encodedOldPushToken }, {
+      pushToken: encodedNewPushToken,
+      deviceId
+    });
   }
 
   async deleteWatcher(pushToken: string) {
@@ -166,7 +172,7 @@ export class WatcherService {
 
     await Promise.all([
       this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id),
-      this.watcherRepository.deleteWatcher({ pushToke: encodedPushToken })
+      this.watcherRepository.deleteWatcher({ pushToken: encodedPushToken })
     ]);
 
   }
