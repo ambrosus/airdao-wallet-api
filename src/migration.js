@@ -32,7 +32,7 @@ const oldWatcherSchema = new Schema({
     updatedAt: Date,
 }, { collection: "watcher", modelName: "watcher" });
 
-const OldWatcher = mongoose.model("watcher", oldWatcherSchema);
+const OldWatcher = mongoose.model("watcher", oldWatcherSchema, "watcher");
 
 const watcherSchema = new Schema({
     deviceId: { type: String, required: false },
