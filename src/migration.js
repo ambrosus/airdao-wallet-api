@@ -40,7 +40,6 @@ const watcherSchema = new Schema({
     threshold: {
         type: Number,
         required: true,
-        enum: [5, 8, 10],
         message: "incorrect threshold (can be 5, 8 or 10)",
     },
     tokenPrice: { type: Number, required: false },
@@ -115,8 +114,6 @@ async function processChunk(chunk) {
     console.log("processing chunk...");
     for (const oldWatcher of chunk) {
         console.log("oldWatcher", oldWatcher);
-        console.log("oldWatcher.price_notification", oldWatcher.price_notification);
-        console.log("oldWatcher.tx_notification", oldWatcher.tx_notification);
         const newWatcher = new Watcher({
             deviceId: oldWatcher.device_id,
             pushToken: oldWatcher.push_token,
