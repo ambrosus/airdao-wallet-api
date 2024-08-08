@@ -50,6 +50,7 @@ export class NotificationService {
       },
       token: pushToken,
     };
+    console.log("Sending notification: ", message);
 
     try {
       const response = await this.fcmClient.send(message);
