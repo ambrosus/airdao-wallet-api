@@ -124,8 +124,8 @@ async function processChunk(chunk) {
             tokenPrice: oldWatcher.token_price,
             txNotification: oldWatcher.tx_notification ? String(oldWatcher.tx_notification).toUpperCase() : "OFF",
             priceNotification: oldWatcher.price_notification ? String(oldWatcher.price_notification).toUpperCase() : "OFF",
-            lastSuccessDate: oldWatcher.last_success_date ? oldWatcher.lastSuccessDate.getTime() : undefined,
-            lastFailDate: oldWatcher.last_fail_date ? oldWatcher.lastFailDate.getTime() : undefined,
+            lastSuccessDate: oldWatcher.last_success_date ? oldWatcher.last_success_date.getTime() : undefined,
+            lastFailDate: oldWatcher.last_fail_date ? oldWatcher.last_fail_date.getTime() : undefined,
         });
 
         await newWatcher.save();
@@ -145,7 +145,7 @@ async function processChunk(chunk) {
                 title: notification.title,
                 body: notification.body,
                 sent: notification.sent,
-                timestamp: notification.timestamp.getTime(),
+                timestamp: notification.timestamp,
             });
             await newNotification.save();
         }
