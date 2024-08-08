@@ -118,10 +118,10 @@ async function processChunk(chunk) {
         const newWatcher = new Watcher({
             deviceId: oldWatcher.device_id,
             pushToken: oldWatcher.push_token,
-            threshold: oldWatcher.threshold,
+            threshold: oldWatcher.threshold ?? 5,
             tokenPrice: oldWatcher.token_price,
-            txNotification: String(oldWatcher.tx_notification).toUpperCase(),
-            priceNotification: String(oldWatcher.price_notification).toUpperCase(),
+            txNotification: String(oldWatcher.tx_notification).toUpperCase() ?? "OFF",
+            priceNotification: String(oldWatcher.price_notification).toUpperCase() ?? "OFF",
             lastSuccessDate: oldWatcher.last_success_date ? oldWatcher.lastSuccessDate.getTime() : undefined,
             lastFailDate: oldWatcher.last_fail_date ? oldWatcher.lastFailDate.getTime() : undefined,
         });
