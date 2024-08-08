@@ -32,7 +32,7 @@ const oldWatcherSchema = new Schema({
     updatedAt: Date,
 });
 
-const OldWatcher = mongoose.model("OldWatcher", oldWatcherSchema);
+const OldWatcher = mongoose.model("watcher", oldWatcherSchema);
 
 const watcherSchema = new Schema({
     deviceId: { type: String, required: false },
@@ -69,7 +69,7 @@ const watcherSchema = new Schema({
     },
 });
 
-const Watcher = mongoose.model("Watcher", watcherSchema);
+const Watcher = mongoose.model("WatcherModel", watcherSchema);
 
 const watcherAddressSchema = new Schema({
     watcherId: { type: String, required: true },
@@ -88,7 +88,7 @@ const watcherAddressSchema = new Schema({
     },
 });
 
-const WatcherAddress = mongoose.model("WatcherAddress", watcherAddressSchema);
+const WatcherAddress = mongoose.model("WatcherAddressModel", watcherAddressSchema);
 
 const historicalNotificationSchema = new Schema({
     watcherId: { type: String, required: true },
@@ -109,7 +109,7 @@ const historicalNotificationSchema = new Schema({
     },
 });
 
-const HistoricalNotification = mongoose.model("HistoricalNotification", historicalNotificationSchema);
+const HistoricalNotification = mongoose.model("HistoricalNotificationModel", historicalNotificationSchema);
 
 async function processChunk(chunk) {
     for (const oldWatcher of chunk) {
