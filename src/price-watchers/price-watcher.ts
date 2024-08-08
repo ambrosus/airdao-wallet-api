@@ -55,7 +55,9 @@ export class PriceWatcher {
 
       const roundedPrice: string = currentPrice.toFixed(5);
 
-      const title = notificationsTitleConfig[appEnv].priceAlert;
+      // const title = notificationsTitleConfig[appEnv].priceAlert;
+      console.log("notificationsTitleConfig[appEnv].priceAlert", notificationsTitleConfig[appEnv].priceAlert);
+      const title = "Price Alert";
       const data = { type: "price-alert", percentage: roundedPercentage };
       let body = "";
 

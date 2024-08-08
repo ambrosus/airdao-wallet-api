@@ -253,7 +253,10 @@ export class WatcherService {
 
     const notifications = watchers.map(async (watcher) => {
       const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
-      const title = notificationsTitleConfig[appEnv].txAlert;
+      // const title = notificationsTitleConfig[appEnv].txAlert;
+      console.log("notificationsTitleConfig[appEnv].txAlert", notificationsTitleConfig[appEnv].txAlert);
+
+      const title = "AMB-Net Tx Alert";
       const body = `From: ${cutAddress(from)}\nTo: ${cutAddress(to)}\nAmount: ${roundedAmount} ${tokenSymbol}`;
 
       try {
