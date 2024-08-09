@@ -77,7 +77,7 @@ export class WatcherService {
     });
   }
 
-  async getAllWatchers(filter?: Record<string, string>) {
+  async getAllWatchers(filter?: Record<string, string | unknown>) {
     return await this.watcherRepository.getAllWatchers(filter);
   }
 
@@ -233,7 +233,7 @@ export class WatcherService {
 
     const watchers = await this.watcherRepository.getAllWatchers({
       _id: { $in: watcherIds },
-      txNotification: "ON"
+      txNotification: { $regex: /^on$/i }
     });
     if (watchers.length === 0) return;
 

@@ -28,7 +28,7 @@ export class PriceWatcher {
 
   private async watchPrice() {
     console.log("Watching Price");
-    const watchers = await this.watcherService.getAllWatchers({ priceNotification: "ON" });
+    const watchers = await this.watcherService.getAllWatchers({ priceNotification: { $regex: /^on$/i } });
     if (!watchers.length) {
       return;
     }

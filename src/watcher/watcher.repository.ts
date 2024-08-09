@@ -7,7 +7,7 @@ export class WatcherRepository {
   constructor() {
   }
 
-  async getAllWatchers(filter?: Record<string, string | Record<string, unknown>>) {
+  async getAllWatchers(filter?: Record<string, string | Record<string, unknown> | unknown>) {
     return WatcherModel.find(filter!);
   }
 
