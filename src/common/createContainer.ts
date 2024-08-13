@@ -14,6 +14,7 @@ import { ApiPriceWatcher, CgPriceWatcher, PriceWatcher } from "../price-watchers
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const serviceAccount = require(firebaseCredPath);
+console.log(serviceAccount);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
