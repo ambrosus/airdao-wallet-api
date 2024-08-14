@@ -62,4 +62,4 @@ async function main() {
   ]);
 }
 
-main().then(() => console.log("App is started"));
+main().then(() => console.log("App is started")).catch(console.error);
