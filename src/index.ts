@@ -15,6 +15,7 @@ async function main() {
     throw new Error("DB URL not found");
   }
 
+  console.log("Starting to create container");
   const container = await createContainer();
   console.log("Container created");
 
