@@ -28,5 +28,6 @@ const watcherAddressModel = new Schema<WatcherAddress>(
 
 export const WatcherAddressModel = mongoose.model<WatcherAddress>(
   "WatcherAddressModel",
-  watcherAddressModel
+  watcherAddressModel,
+  "watcheraddressmodels"
 );

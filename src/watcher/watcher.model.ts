@@ -53,5 +53,6 @@ const watcherModel = new Schema<Watcher>(
 
 export const WatcherModel = mongoose.model<Watcher>(
   "WatcherModel",
-  watcherModel
+  watcherModel,
+  "watchermodels"
 );

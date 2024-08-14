@@ -32,5 +32,6 @@ const historicalNotificationModel = new Schema<HistoricalNotification>(
 
 export const HistoricalNotificationModel = mongoose.model<HistoricalNotification>(
   "HistoricalNotificationModel",
-  historicalNotificationModel
+  historicalNotificationModel,
+  "historicalnotificationmodels"
 );
