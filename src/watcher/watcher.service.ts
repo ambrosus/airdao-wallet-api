@@ -28,9 +28,7 @@ export class WatcherService {
     const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
     if (deviceId) {
-      console.log("if deviceId", deviceId);
       const watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
-      console.log("watcher", watcher);
       if (watcher) {
         const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
         await this.deleteWatcher(decodedPushToken);
