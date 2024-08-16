@@ -240,7 +240,9 @@ export class WatcherService {
     if (!txDataResponse || txDataResponse.data.data.length === 0) return;
 
     const { data: { data: [txData] } } = txDataResponse;
-    const { from, to, value, timestamp, token } = txData;
+    const { from, to, value, timestamp, token, type } = txData;
+
+    if (type !== "TokenTransfer") return;
 
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
     if (!(await isERC20Standard(token.address))) return;
