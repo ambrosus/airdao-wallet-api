@@ -10,6 +10,7 @@ import { NotificationService } from "../notification-sender";
 import { WatcherAddressesService } from "../watcher-addresses";
 import { HistoricalNotificationsService } from "../historical-notifications";
 import { camelToSnake } from "../utils/camel-to-snake-case";
+import { isERC20Standard } from "../utils/erc-standard-checker";
 
 @singleton()
 export class WatcherService {
@@ -239,12 +240,15 @@ export class WatcherService {
     if (!txDataResponse || txDataResponse.data.data.length === 0) return;
 
     const { data: { data: [txData] } } = txDataResponse;
-    const { from, to, value, timestamp } = txData;
+    const { from, to, value, timestamp, token } = txData;
+
+    // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
+    if (!(await isERC20Standard(token.address))) return;
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
     const roundedAmount = Number(value.ether).toFixed(2);
-    const tokenSymbol = value.symbol || (value.symbol === "" ? "HPT" : "AMB");
+    const tokenSymbol = value.symbol ? value.symbol : "";
 
     const data = {
       type: "transaction-alert",

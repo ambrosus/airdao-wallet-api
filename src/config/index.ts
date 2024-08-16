@@ -15,6 +15,7 @@ export const explorerUrl = env.EXPLORER_API as string;
 export const callbackUrl = env.CALLBACK_URL as string;
 export const appPort = Number(env.PORT) || 5001;
 export const appEnv = env.APP_ENV as AppEnv || "dev";
+export const rpcUrl = env.RPC_URL as string;
 
 export const androidChannel = env.ANDROID_CHANNEL_NAME as string;
 

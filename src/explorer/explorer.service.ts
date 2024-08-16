@@ -9,6 +9,13 @@ export interface TransactionData {
       ether: string,
       symbol?: string
     },
+    token: {
+      "address": string,
+      "name": string,
+      "symbol": string,
+      "decimals": number,
+      "totalSupply": number
+    }
     from: string,
     to: string,
     timestamp: string,
