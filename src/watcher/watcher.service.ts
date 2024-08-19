@@ -254,7 +254,7 @@ export class WatcherService {
     console.log("before isERC20Standard check", { token, result: await isERC20Standard(token.address) });
 
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
-    if (!(await isERC20Standard(token.address))) return;
+    if (token && !(await isERC20Standard(token.address))) return;
 
     console.log("after isERC20Standard check");
 
