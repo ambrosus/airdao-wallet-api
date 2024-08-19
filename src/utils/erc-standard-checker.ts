@@ -31,6 +31,7 @@ export async function isERC20Standard(tokenAddress: string): Promise<boolean> {
 
     return true;
   } catch (e) {
+    console.log(e);
     return false;
   }
 }
