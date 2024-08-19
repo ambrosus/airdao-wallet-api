@@ -227,6 +227,7 @@ export class WatcherService {
   }
 
   async handleCallback(address: string, txHash: string) {
+    console.log("OProcessing explorer callback");
     const watcherIds = await this.watcherAddressesService.getWatcherIdsByAddress(address);
     if (watcherIds.length === 0) return;
 
@@ -242,10 +243,17 @@ export class WatcherService {
     const { data: { data: [txData] } } = txDataResponse;
     const { from, to, value, timestamp, token, type } = txData;
 
+    console.log("before type TokenTransfer check");
     if (type !== "TokenTransfer") return;
+
+    console.log("after type TokenTransfer check");
+
+    console.log("before isERC20Standard check", { token, result: await isERC20Standard(token.address) });
 
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
     if (!(await isERC20Standard(token.address))) return;
+
+    console.log("after isERC20Standard check");
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
