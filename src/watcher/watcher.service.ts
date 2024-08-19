@@ -243,6 +243,7 @@ export class WatcherService {
     if (!txDataResponse || txDataResponse.data.data.length === 0) return;
 
     const { data: { data: [txData] } } = txDataResponse;
+    console.log(txData);
     const { from, to, value, timestamp, token, type } = txData;
 
     console.log("before type TokenTransfer check");
