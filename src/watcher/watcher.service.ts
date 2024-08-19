@@ -12,6 +12,8 @@ import { HistoricalNotificationsService } from "../historical-notifications";
 import { camelToSnake } from "../utils/camel-to-snake-case";
 import { isERC20Standard } from "../utils/erc-standard-checker";
 
+const SUPPORTED_TX_TYPES = ["Transfer", "TokenTransfer"];
+
 @singleton()
 export class WatcherService {
 
@@ -227,7 +229,7 @@ export class WatcherService {
   }
 
   async handleCallback(address: string, txHash: string) {
-    console.log("OProcessing explorer callback");
+    console.log("Processing explorer callback");
     const watcherIds = await this.watcherAddressesService.getWatcherIdsByAddress(address);
     if (watcherIds.length === 0) return;
 
@@ -244,7 +246,7 @@ export class WatcherService {
     const { from, to, value, timestamp, token, type } = txData;
 
     console.log("before type TokenTransfer check");
-    if (type !== "TokenTransfer") return;
+    if (!SUPPORTED_TX_TYPES.includes(type)) return;
 
     console.log("after type TokenTransfer check");
 
