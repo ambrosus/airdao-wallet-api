@@ -272,7 +272,7 @@ export class WatcherService {
         await this.notificationService.sendNotification({ title, body, pushToken: decodedPushToken, data });
         await this.watcherRepository.updateWatcher({ _id: watcher._id }, { lastSuccessDate: Date.now() });
       } catch (error) {
-        if ((error as Error).message.includes("code: registration-token-not-registered")) {
+        if ((error as Error).message.includes("messaging/registration-token-not-registered")) {
           await this.watcherRepository.updateWatcher({ _id: watcher._id }, { lastFailDate: Date.now() });
         }
       }
