@@ -22,19 +22,15 @@ const nameData = iface.encodeFunctionData("name");
 const symbolData = iface.encodeFunctionData("symbol");
 
 export async function isERC20Standard(tokenAddress: string): Promise<boolean> {
-  console.log("isERC20Standard method");
   try {
     const nameResult = await provider.call({ to: tokenAddress, data: nameData });
     const symbolResult = await provider.call({ to: tokenAddress, data: symbolData });
 
     const name = iface.decodeFunctionResult("name", nameResult)[0];
-    console.log("Name", name);
     const symbol = iface.decodeFunctionResult("symbol", symbolResult)[0];
-    console.log("Symbol", symbol);
 
     return true;
   } catch (e) {
-    console.log(e);
     return false;
   }
 }

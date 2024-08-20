@@ -243,7 +243,6 @@ export class WatcherService {
     if (!txDataResponse || txDataResponse.data.data.length === 0) return;
 
     const { data: { data: [txData] } } = txDataResponse;
-    console.log(txData);
     const { from, to, value, timestamp, token, type } = txData;
 
     console.log("before type TokenTransfer check");
@@ -254,6 +253,7 @@ export class WatcherService {
     console.log("before isERC20Standard check");
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
     if (token && !(await isERC20Standard(token.address))) return;
+    console.log("after isERC20Standard check");
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
