@@ -9,7 +9,7 @@ export interface TransactionData {
       ether: string,
       symbol?: string
     };
-    token: {
+    token?: {
       "address": string,
       "name": string,
       "symbol": string,
