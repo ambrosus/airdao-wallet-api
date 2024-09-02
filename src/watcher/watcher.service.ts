@@ -239,12 +239,12 @@ export class WatcherService {
     if (!txDataResponse || txDataResponse.data.data.length === 0) return;
 
     const { data: { data: [txData] } } = txDataResponse;
-    const { from, to, value, timestamp } = txData;
+    const { from, to, value, timestamp, token } = txData;
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
     const roundedAmount = Number(value.ether).toFixed(2);
-    const tokenSymbol = value.symbol || (value.symbol === "" ? "HPT" : "AMB");
+    const tokenSymbol = value.symbol ?? (token ? token.symbol : "AMB");
 
     const data = {
       type: "transaction-alert",

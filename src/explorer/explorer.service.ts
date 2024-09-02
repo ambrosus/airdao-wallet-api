@@ -8,10 +8,18 @@ export interface TransactionData {
       wei: string,
       ether: string,
       symbol?: string
-    },
-    from: string,
-    to: string,
-    timestamp: string,
+    };
+    token?: {
+      "address": string,
+      "name": string,
+      "symbol": string,
+      "decimals": number,
+      "totalSupply": number
+    };
+    type: string;
+    from: string;
+    to: string;
+    timestamp: string;
   }[];
 }
 
