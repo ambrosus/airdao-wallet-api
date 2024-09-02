@@ -249,18 +249,13 @@ export class WatcherService {
 
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
     if (token && !(await isERC20Standard(token.address))) {
-      console.log("inside if with token check", { token });
       return;
     }
-
-    console.log("After ERC-20 check");
-
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
     const roundedAmount = Number(value.ether).toFixed(2);
     const tokenSymbol = value.symbol ?? (token ? token.symbol : "AMB");
-    console.log("Token Symbol", tokenSymbol);
 
     const data = {
       type: "transaction-alert",

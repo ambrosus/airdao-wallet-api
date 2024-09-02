@@ -54,15 +54,9 @@ export class PriceWatcher {
       const data = { type: "price-alert", percentage: roundedPercentage };
       let body = "";
 
-      console.log("Percentage", percentage);
-      console.log("RoundedPercentage", roundedPercentage);
-      console.log("Threshold", watcher.threshold);
-
       if (roundedPercentage >= watcher.threshold) {
-        console.log("roundedPercentage >= watcher.threshold");
         body = `🚀 AMB Price changed on +${roundedPercentage}%! Current price $${roundedPrice}`;
       } else if (roundedPercentage <= -watcher.threshold) {
-        console.log("roundedPercentage <= -watcher.threshold");
         body = `🔻 AMB Price changed on -${roundedPercentage}%! Current price $${roundedPrice}`;
       }
 
