@@ -71,6 +71,8 @@ export class WatcherService {
 
     const { _doc } = watcher as unknown as { _doc: Watcher };
 
+    this.decodeWatcherToken(_doc);
+
     return camelToSnake({
       ..._doc,
       addresses,
@@ -303,5 +305,9 @@ export class WatcherService {
     if (addresses.length === 0) return;
 
     await this.explorerService.subscribeAddresses(addresses);
+  }
+
+  private decodeWatcherToken(watcher: Watcher) {
+    watcher.pushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
   }
 }
