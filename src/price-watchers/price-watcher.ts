@@ -40,15 +40,21 @@ export class PriceWatcher {
       }
 
       const currentPrice = Number(tokenPrice);
+      console.log("Current Price", currentPrice);
+      console.log("Watcher Token Price", watcher.tokenPrice);
 
       if (!watcher.tokenPrice) return;
 
       const percentage: number = (currentPrice - watcher.tokenPrice) / watcher.tokenPrice * 100;
+      console.log("Price change", percentage);
 
       const roundedPercentage: number = Math.round(percentage * 100) / 100;
+      console.log("Rounded Price change", roundedPercentage);
+      console.log("Watcher Threshold", watcher.threshold);
       if (roundedPercentage < watcher.threshold) return;
 
       const roundedPrice: string = currentPrice.toFixed(5);
+      console.log("Current Price", roundedPrice);
 
       const title = notificationsTitleConfig[appEnv].priceAlert;
       const data = { type: "price-alert", percentage: roundedPercentage };
