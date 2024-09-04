@@ -45,6 +45,7 @@ export class PriceWatcher {
 
       const percentage: number = (currentPrice - watcher.tokenPrice) / watcher.tokenPrice * 100;
 
+
       const roundedPercentage: number = Math.abs(Math.round(percentage * 100) / 100);
       if (roundedPercentage < watcher.threshold) return;
 
