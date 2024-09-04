@@ -10,6 +10,9 @@ import { NotificationService } from "../notification-sender";
 import { WatcherAddressesService } from "../watcher-addresses";
 import { HistoricalNotificationsService } from "../historical-notifications";
 import { camelToSnake } from "../utils/camel-to-snake-case";
+import { isERC20Standard } from "../utils/erc-standard-checker";
+
+const SUPPORTED_TX_TYPES = ["Transfer", "TokenTransfer"];
 
 @singleton()
 export class WatcherService {
@@ -67,6 +70,8 @@ export class WatcherService {
     ]);
 
     const { _doc } = watcher as unknown as { _doc: Watcher };
+
+    this.decodeWatcherToken(_doc);
 
     return camelToSnake({
       ..._doc,
@@ -226,6 +231,7 @@ export class WatcherService {
   }
 
   async handleCallback(address: string, txHash: string) {
+    console.log("Processing explorer callback");
     const watcherIds = await this.watcherAddressesService.getWatcherIdsByAddress(address);
     if (watcherIds.length === 0) return;
 
@@ -239,7 +245,14 @@ export class WatcherService {
     if (!txDataResponse || txDataResponse.data.data.length === 0) return;
 
     const { data: { data: [txData] } } = txDataResponse;
-    const { from, to, value, timestamp, token } = txData;
+    const { from, to, value, timestamp, token, type } = txData;
+
+    if (!SUPPORTED_TX_TYPES.includes(type)) return;
+
+    // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
+    if (token && !(await isERC20Standard(token.address))) {
+      return;
+    }
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
@@ -266,7 +279,7 @@ export class WatcherService {
         await this.notificationService.sendNotification({ title, body, pushToken: decodedPushToken, data });
         await this.watcherRepository.updateWatcher({ _id: watcher._id }, { lastSuccessDate: Date.now() });
       } catch (error) {
-        if ((error as Error).message.includes("code: registration-token-not-registered")) {
+        if ((error as Error).message.includes("messaging/registration-token-not-registered")) {
           await this.watcherRepository.updateWatcher({ _id: watcher._id }, { lastFailDate: Date.now() });
         }
       }
@@ -292,5 +305,9 @@ export class WatcherService {
     if (addresses.length === 0) return;
 
     await this.explorerService.subscribeAddresses(addresses);
+  }
+
+  private decodeWatcherToken(watcher: Watcher) {
+    watcher.pushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
   }
 }

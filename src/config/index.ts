@@ -15,6 +15,7 @@ export const explorerUrl = env.EXPLORER_API as string;
 export const callbackUrl = env.CALLBACK_URL as string;
 export const appPort = Number(env.PORT) || 5001;
 export const appEnv = env.APP_ENV as AppEnv || "dev";
+export const rpcUrl = env.RPC_URL as string;
 
 export const androidChannel = env.ANDROID_CHANNEL_NAME as string;
 
@@ -22,6 +23,10 @@ export const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export const notificationsTitleConfig = {
   dev: {
+    priceAlert: "Price Alert Dev",
+    txAlert: "AMB-DevNet Tx Alert"
+  },
+  test: {
     priceAlert: "Price Alert Test",
     txAlert: "AMB-TestNet Tx Alert"
   },
