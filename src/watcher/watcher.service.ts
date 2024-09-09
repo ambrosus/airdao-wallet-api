@@ -4,7 +4,7 @@ import { singleton } from "tsyringe";
 
 import { Watcher } from "./watcher.model";
 import { ExplorerService } from "../explorer";
-import { appEnv, explorerToken, notificationsTitleConfig, ONE_DAY_IN_MS } from "../config";
+import { appEnv, explorerToken, notificationsTitleConfig, ONE_DAY_IN_MS, rewardsBankAddress } from "../config";
 import { WatcherRepository } from "./watcher.repository";
 import { NotificationService } from "../notification-sender";
 import { WatcherAddressesService } from "../watcher-addresses";
@@ -248,6 +248,10 @@ export class WatcherService {
     const { from, to, value, timestamp, token, type } = txData;
 
     if (!SUPPORTED_TX_TYPES.includes(type)) return;
+
+    // @dev To avoid sending notifications for node rewards transactions
+    // @dev To lower case for case-insensitive comparison
+    if (from.toLowerCase() === rewardsBankAddress.toLowerCase()) return;
 
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
     if (token && !(await isERC20Standard(token.address))) {

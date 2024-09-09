@@ -2,7 +2,6 @@ import { DependencyContainer } from "tsyringe";
 import { Application } from "express";
 import { WatcherNetwork } from "../watcher";
 
-
 const routes = (app: Application, container: DependencyContainer) => {
 
   const watcherNetwork = container.resolve(WatcherNetwork);
