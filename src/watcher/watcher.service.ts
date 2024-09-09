@@ -246,16 +246,12 @@ export class WatcherService {
 
     const { data: { data: [txData] } } = txDataResponse;
     const { from, to, value, timestamp, token, type } = txData;
-    console.log("Tx Data: ", from, to, type);
 
     if (!SUPPORTED_TX_TYPES.includes(type)) return;
 
     // @dev To avoid sending notifications for node rewards transactions
     // @dev To lower case for case-insensitive comparison
     if (from.toLowerCase() === rewardsBankAddress.toLowerCase()) return;
-    console.log("Addresses Comparsion: ", from.toLowerCase(), rewardsBankAddress.toLowerCase());
-
-    console.log("After check Tx Data: ", from, to, type);
 
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
     if (token && !(await isERC20Standard(token.address))) {
