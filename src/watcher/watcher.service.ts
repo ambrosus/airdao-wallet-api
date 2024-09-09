@@ -247,7 +247,7 @@ export class WatcherService {
     const { data: { data: [txData] } } = txDataResponse;
     const { from, to, value, timestamp, token, type } = txData;
 
-    if (!(await this.isNotificationNeeded(type, from, token!, value))) return;
+    if (!(await this.isNotificationNeeded(type, from, token, value))) return;
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
@@ -309,8 +309,8 @@ export class WatcherService {
   private async isNotificationNeeded(
     type: string,
     from: string,
-    token: { address: string },
-    value: { wei: string }
+    token: { address: string } | undefined,
+    value: { ether: number }
   ) {
     if (!SUPPORTED_TX_TYPES.includes(type)) return false;
 
@@ -323,7 +323,7 @@ export class WatcherService {
       return false;
     }
 
-    if (value.wei === "0") return false;
+    if (value.ether === 0) return false;
 
     return true;
   }

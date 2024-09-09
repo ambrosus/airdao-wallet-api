@@ -6,7 +6,7 @@ export interface TransactionData {
   data: {
     value: {
       wei: string,
-      ether: string,
+      ether: number,
       symbol?: string
     };
     token?: {
