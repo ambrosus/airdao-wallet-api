@@ -247,16 +247,7 @@ export class WatcherService {
     const { data: { data: [txData] } } = txDataResponse;
     const { from, to, value, timestamp, token, type } = txData;
 
-    if (!SUPPORTED_TX_TYPES.includes(type)) return;
-
-    // @dev To avoid sending notifications for node rewards transactions
-    // @dev To lower case for case-insensitive comparison
-    if (from.toLowerCase() === rewardsBankAddress.toLowerCase()) return;
-
-    // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
-    if (token && !(await isERC20Standard(token.address))) {
-      return;
-    }
+    if (!(await this.isNotificationNeeded(type, from, token, value))) return;
 
     const cutAddress = (addr: string) => addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
@@ -313,5 +304,27 @@ export class WatcherService {
 
   private decodeWatcherToken(watcher: Watcher) {
     watcher.pushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
+  }
+
+  private async isNotificationNeeded(
+    type: string,
+    from: string,
+    token: { address: string } | undefined,
+    value: { ether: number }
+  ) {
+    if (!SUPPORTED_TX_TYPES.includes(type)) return false;
+
+    // @dev To avoid sending notifications for node rewards transactions
+    // @dev To lower case for case-insensitive comparison
+    if (from.toLowerCase() === rewardsBankAddress.toLowerCase()) return false;
+
+    // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
+    if (token && !(await isERC20Standard(token.address))) {
+      return false;
+    }
+
+    if (value.ether === 0) return false;
+
+    return true;
   }
 }
