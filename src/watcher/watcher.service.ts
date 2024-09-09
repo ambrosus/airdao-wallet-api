@@ -254,6 +254,7 @@ export class WatcherService {
     // @dev To avoid sending notifications for node rewards transactions
     // @dev To lower case for case-insensitive comparison
     if (from.toLowerCase() === rewardsBankAddress.toLowerCase()) return;
+    console.log("After check address ", from, to, type);
 
     // @dev Did it for hiding ERC-1155 and ERC-721 transfers for users
     if (token && !(await isERC20Standard(token.address))) {
