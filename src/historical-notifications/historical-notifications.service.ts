@@ -12,6 +12,7 @@ export class HistoricalNotificationsService {
   }
 
   async addHistoricalNotification(watcherId: string, notification: Record<string, unknown>) {
+    console.log("Adding historical notification", { watcherId, notification });
     return this.repository.addHistoricalNotification(watcherId, notification);
   }
 }
