@@ -49,7 +49,6 @@ const routes = (app: Application, container: DependencyContainer) => {
 
   app.post("/api/v1/send-notification", async (req, res) => {
     const { title, body, pushToken, data } = req.body;
-    await sleep(5000);
     container.resolve(NotificationService).sendNotification({
       title,
       body,
@@ -62,11 +61,5 @@ const routes = (app: Application, container: DependencyContainer) => {
     });
   });
 };
-
-function sleep(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
 
 export default routes;
