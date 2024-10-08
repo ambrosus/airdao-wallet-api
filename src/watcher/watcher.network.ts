@@ -24,7 +24,8 @@ export class WatcherNetwork {
   async getWatcherHistoricalPrices(req: Request, res: Response): Promise<void> {
     try {
       const prices = await this.service.getWatcherHistoryPrices();
-      res.json(prices);
+      if (!prices || prices.length === 0) res.json({ prices: [] });
+      else res.json({ prices: JSON.parse(prices) });
     } catch (error) {
       this.handleErrorResponse(res, error);
     }
