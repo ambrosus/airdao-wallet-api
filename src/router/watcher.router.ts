@@ -47,20 +47,26 @@ const routes = (app: Application, container: DependencyContainer) => {
     watcherNetwork.updateWatcherPushToken.bind(watcherNetwork)
   );
 
-  app.post("/api/v1/send-notification", (req, res) => {
+  app.post("/api/v1/send-notification", async (req, res) => {
     const { title, body, pushToken, data } = req.body;
-    setTimeout(() => {
-      container.resolve(NotificationService).sendNotification({
-        title,
-        body,
-        pushToken,
-        data
-      }).then((result) => {
-        res.send(result);
-      }).catch((error) => {
-        res.status(500).send(error);
-      });
-    }, 5000);
+    await sleep(5000);
+    container.resolve(NotificationService).sendNotification({
+      title,
+      body,
+      pushToken,
+      data
+    }).then((result) => {
+      res.send(result);
+    }).catch((error) => {
+      res.status(500).send(error);
+    });
   });
 };
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export default routes;
