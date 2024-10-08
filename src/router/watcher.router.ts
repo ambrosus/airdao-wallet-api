@@ -2,6 +2,7 @@ import { DependencyContainer } from "tsyringe";
 import { Application } from "express";
 import { WatcherNetwork } from "../watcher";
 import { NotificationService } from "../notification-sender";
+import { HistoricalNotificationsService } from "../historical-notifications";
 
 const routes = (app: Application, container: DependencyContainer) => {
 
@@ -48,17 +49,24 @@ const routes = (app: Application, container: DependencyContainer) => {
   );
 
   app.post("/api/v1/send-notification", async (req, res) => {
-    const { title, body, pushToken, data } = req.body;
-    container.resolve(NotificationService).sendNotification({
-      title,
-      body,
-      pushToken,
-      data
-    }).then((result) => {
+    const { title, body, pushToken, data, watcherId } = req.body;
+    try {
+      const result = await container.resolve(NotificationService).sendNotification({
+        title,
+        body,
+        pushToken,
+        data
+      });
+      await container.resolve(HistoricalNotificationsService).addHistoricalNotification(watcherId, {
+        title,
+        body,
+        sent: true,
+        timestamp: Date.now()
+      });
       res.send(result);
-    }).catch((error) => {
-      res.status(500).send(error);
-    });
+    } catch (e) {
+      res.status(500).send(e);
+    }
   });
 };
 
