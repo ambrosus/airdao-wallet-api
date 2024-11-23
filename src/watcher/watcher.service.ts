@@ -218,7 +218,7 @@ export class WatcherService {
         ])
       );
     }
-    await Promise.all(deletions);
+    await Promise.allSettled(deletions);
   }
 
   async watcherCallback(id: string, items: { address: string, txHash: string }[]) {
@@ -290,7 +290,7 @@ export class WatcherService {
       ]);
     });
 
-    await Promise.all(notifications);
+    await Promise.allSettled(notifications);
   }
 
   async subscribeToExplorer() {
