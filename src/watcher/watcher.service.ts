@@ -31,10 +31,8 @@ export class WatcherService {
     const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
     if (deviceId) {
-      console.log("Before getting watcher by device id");
       const watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
       if (watcher) {
-        console.log("If watcher exists with this device id");
         const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
         await this.deleteWatcher(decodedPushToken);
       }
@@ -42,19 +40,10 @@ export class WatcherService {
 
     console.log("Before getting watcher");
     const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
-    if (watcher) {
-      console.log("If watcher exists with this push token");
-      throw new Error("watcher for this address and token already exists");
-    }
-    console.log("After getting watcher", { watcher });
+    if (watcher) throw new Error("watcher for this address and token already exists");
 
-    console.log("Before getting token price");
     const tokenPrice = await this.cacheStorage.get("apiPrice");
-    if (!tokenPrice) {
-      console.log("If price data not found");
-      throw new Error("Price data not found");
-    }
-    console.log("After getting token price", { tokenPrice });
+    if (!tokenPrice) throw new Error("Price data not found");
 
     await this.watcherRepository.createWatcher({
       pushToken: encodedPushToken,
@@ -173,24 +162,17 @@ export class WatcherService {
   }
 
   async deleteWatcher(pushToken: string) {
-    console.log("Delete Watcher", pushToken);
     const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
-    console.log("Before getting watcher");
     const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
     if (!watcher) {
-      console.log("If watcher not found");
       throw new Error("watcher not found");
     }
 
-    console.log("Before getting watcher addresses");
     const watcherAddresses = await this.watcherAddressesService.getWatcherAddresses(watcher._id);
-    if (watcherAddresses.length > 0) {
-      console.log("If watcher addresses found");
-      await this.explorerService.unsubscribeAddresses(watcherAddresses);
-    }
+    if (watcherAddresses.length > 0) await this.explorerService.unsubscribeAddresses(watcherAddresses);
 
-    console.log("Before deleting watcher and watcher addresses");
+
     await Promise.all([
       this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id),
       this.watcherRepository.deleteWatcher({ pushToken: encodedPushToken }),
