@@ -31,22 +31,30 @@ export class WatcherService {
     const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
     if (deviceId) {
+      console.log("Before getting watcher by device id");
       const watcher = await this.watcherRepository.getWatcherByDeviceId(deviceId);
       if (watcher) {
+        console.log("If watcher exists with this device id");
         const decodedPushToken = Buffer.from(watcher.pushToken, "base64").toString("utf-8");
         await this.deleteWatcher(decodedPushToken);
       }
     }
 
+    console.log("Before getting watcher");
     const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
     if (watcher) {
+      console.log("If watcher exists with this push token");
       throw new Error("watcher for this address and token already exists");
     }
+    console.log("After getting watcher", { watcher });
 
+    console.log("Before getting token price");
     const tokenPrice = await this.cacheStorage.get("apiPrice");
     if (!tokenPrice) {
+      console.log("If price data not found");
       throw new Error("Price data not found");
     }
+    console.log("After getting token price", { tokenPrice });
 
     await this.watcherRepository.createWatcher({
       pushToken: encodedPushToken,
@@ -56,6 +64,8 @@ export class WatcherService {
       tokenPrice: Number(tokenPrice),
       deviceId,
     } as unknown as Watcher);
+
+    return { message: "Watcher created" };
   }
 
   async getWatcher(pushToken: string) {
@@ -66,7 +76,7 @@ export class WatcherService {
 
     const [addresses, historicalNotifications] = await Promise.all([
       this.watcherAddressesService.getWatcherAddressesWithDetails(watcher._id),
-      this.historicalNotificationsService.getHistoricalNotifications(watcher._id)
+      this.historicalNotificationsService.getHistoricalNotifications(watcher._id),
     ]);
 
     const { _doc } = watcher as unknown as { _doc: Watcher };
@@ -76,7 +86,7 @@ export class WatcherService {
     return camelToSnake({
       ..._doc,
       addresses,
-      historicalNotifications
+      historicalNotifications,
     });
   }
 
@@ -106,7 +116,7 @@ export class WatcherService {
       addresses,
       threshold,
       txNotification,
-      priceNotification
+      priceNotification,
     } = updateFields;
 
     const updates: { [key: string]: unknown } = {};
@@ -118,7 +128,7 @@ export class WatcherService {
       if (uniqueAddresses.length > 0) {
         await Promise.all([
           this.explorerService.subscribeAddresses(uniqueAddresses),
-          ...uniqueAddresses.map(address => this.watcherAddressesService.createWatcherAddress(watcher._id, address))
+          ...uniqueAddresses.map(address => this.watcherAddressesService.createWatcherAddress(watcher._id, address)),
         ]);
       } else {
         throw new Error("400-No new addresses to add");
@@ -158,26 +168,35 @@ export class WatcherService {
 
     await this.watcherRepository.updateWatcher({ pushToken: encodedOldPushToken }, {
       pushToken: encodedNewPushToken,
-      deviceId
+      deviceId,
     });
   }
 
   async deleteWatcher(pushToken: string) {
+    console.log("Delete Watcher", pushToken);
     const encodedPushToken = Buffer.from(pushToken).toString("base64");
 
+    console.log("Before getting watcher");
     const watcher = await this.watcherRepository.getWatcher(encodedPushToken);
     if (!watcher) {
+      console.log("If watcher not found");
       throw new Error("watcher not found");
     }
 
+    console.log("Before getting watcher addresses");
     const watcherAddresses = await this.watcherAddressesService.getWatcherAddresses(watcher._id);
-    if (watcherAddresses.length > 0) await this.explorerService.unsubscribeAddresses(watcherAddresses);
+    if (watcherAddresses.length > 0) {
+      console.log("If watcher addresses found");
+      await this.explorerService.unsubscribeAddresses(watcherAddresses);
+    }
 
+    console.log("Before deleting watcher and watcher addresses");
     await Promise.all([
       this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id),
-      this.watcherRepository.deleteWatcher({ pushToken: encodedPushToken })
+      this.watcherRepository.deleteWatcher({ pushToken: encodedPushToken }),
     ]);
 
+    return { message: "Watcher deleted" };
   }
 
   async deleteWatcherAddresses(pushToken: string, addresses: string[]) {
@@ -195,7 +214,7 @@ export class WatcherService {
     if (allowedAddresses.length > 0) {
       await Promise.all([
         this.explorerService.unsubscribeAddresses(allowedAddresses),
-        this.watcherAddressesService.deleteWatcherAddresses(watcher._id, allowedAddresses)
+        this.watcherAddressesService.deleteWatcherAddresses(watcher._id, allowedAddresses),
       ]);
     }
   }
@@ -203,8 +222,8 @@ export class WatcherService {
   async deleteWatchersWithStaleData() {
     const watchers = await this.watcherRepository.getAllWatchers({
       lastSuccessDate: {
-        $lt: new Date(Date.now() - 7 * ONE_DAY_IN_MS)
-      }
+        $lt: new Date(Date.now() - 7 * ONE_DAY_IN_MS),
+      },
     });
 
     if (watchers.length === 0) return;
@@ -214,8 +233,8 @@ export class WatcherService {
       deletions.push(
         Promise.all([
           this.watcherRepository.deleteWatcher({ _id: watcher._id }),
-          this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id)
-        ])
+          this.watcherAddressesService.deleteAllWatcherAddresses(watcher._id),
+        ]),
       );
     }
     await Promise.allSettled(deletions);
@@ -237,7 +256,7 @@ export class WatcherService {
 
     const watchers = await this.watcherRepository.getAllWatchers({
       _id: { $in: watcherIds },
-      txNotification: { $regex: /^on$/i }
+      txNotification: { $regex: /^on$/i },
     });
     if (watchers.length === 0) return;
 
@@ -260,7 +279,7 @@ export class WatcherService {
       sender: cutAddress(from),
       to: cutAddress(to),
       amount: roundedAmount,
-      symbol: tokenSymbol
+      symbol: tokenSymbol,
     };
 
 
@@ -284,9 +303,9 @@ export class WatcherService {
           title,
           body,
           sent: true,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         }),
-        this.watcherAddressesService.updateWatcherAddress(watcher._id, address, { txHash })
+        this.watcherAddressesService.updateWatcherAddress(watcher._id, address, { txHash }),
       ]);
     });
 
@@ -310,7 +329,7 @@ export class WatcherService {
     type: string,
     from: string,
     token: { address: string } | undefined,
-    value: { ether: number }
+    value: { ether: number },
   ) {
     if (!SUPPORTED_TX_TYPES.includes(type)) return false;
 

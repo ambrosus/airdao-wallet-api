@@ -34,6 +34,7 @@ export class WatcherNetwork {
   async createWatcher(req: Request, res: Response): Promise<void> {
     try {
       const { push_token, device_id } = req.body;
+      console.log({ push_token, device_id });
       await this.service.createWatcher(push_token, device_id);
       res.json({ message: "Watcher created" });
     } catch (error) {
