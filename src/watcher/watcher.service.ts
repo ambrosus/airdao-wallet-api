@@ -170,6 +170,7 @@ export class WatcherService {
     }
 
     const watcherAddresses = await this.watcherAddressesService.getWatcherAddresses(watcher._id);
+    console.log("Watcher addresses to unsubscribe:", watcherAddresses);
     if (watcherAddresses.length > 0) await this.explorerService.unsubscribeAddresses(watcherAddresses);
 
 
